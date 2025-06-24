@@ -5,6 +5,7 @@ import 'screens/progress_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/friends_screen.dart'; // Import the new friends screen
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});

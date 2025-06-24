@@ -55,30 +55,31 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchDashboardData();
   }
 
+  // --- REVISED AND CORRECTED DATA FETCHING METHOD ---
   Future<void> _fetchDashboardData() async {
-    // (This function remains the same)
     if (!mounted) return;
-    // Don't set isLoading to true here, we handle it with a delay to prevent flashes
+    // Don't set isLoading here to allow shimmer to show without a "flash"
     // setState(() { _isLoading = true; _errorMessage = null; });
 
     try {
       final userId = supabase.auth.currentUser!.id;
       final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      final responses = await Future.wait([
-        supabase.from('profiles').select().eq('id', userId).single(),
-        supabase.from('food_diary').select().eq('user_id', userId).eq('logged_date', today),
-        supabase.from('water_log').select('quantity_ml').eq('user_id', userId).eq('logged_date', today),
-        supabase.from('exercise_log').select().eq('user_id', userId).eq('logged_date', today),
-      ]);
+      // Fetch profile data
+      final profileResponse = await supabase.from('profiles').select().eq('id', userId).single();
+      _profile = profileResponse;
 
-      _profile = responses[0] as Map<String, dynamic>;
-      final foodResponse = responses[1] as List;
+      // Fetch today's food entries
+      final foodResponse = await supabase.from('food_diary').select().eq('user_id', userId).eq('logged_date', today);
       _foodEntries = foodResponse.map((item) => FoodEntry.fromMap(item)).toList();
       _totalCaloriesToday = _foodEntries.fold(0, (sum, item) => sum + item.calories);
-      final waterResponse = responses[2] as List;
+      
+      // Fetch today's water entries
+      final waterResponse = await supabase.from('water_log').select('quantity_ml').eq('user_id', userId).eq('logged_date', today);
       _totalWaterToday = waterResponse.fold(0, (sum, item) => sum + (item['quantity_ml'] as int));
-      final exerciseResponse = responses[3] as List;
+
+      // Fetch today's exercise entries
+      final exerciseResponse = await supabase.from('exercise_log').select().eq('user_id', userId).eq('logged_date', today);
       _exerciseEntries = exerciseResponse.map((item) => ExerciseEntry.fromMap(item)).toList();
       _totalCaloriesBurnedToday = _exerciseEntries.fold(0, (sum, item) => sum + item.caloriesBurned);
 
@@ -90,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logWater(int quantity) async {
-    // (This function remains the same)
     try {
       await supabase.from('water_log').insert({'user_id': supabase.auth.currentUser!.id, 'quantity_ml': quantity});
       _fetchDashboardData();
@@ -100,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAddWaterDialog() {
-    // (This function remains the same)
     showDialog(context: context, builder: (context) => AlertDialog(
           title: const Text('Add Water'),
           content: const Text('Select the amount of water you drank.'),
@@ -122,9 +121,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        // The body now conditionally shows the Shimmer or the real content
         body: _isLoading
-            ? _buildDashboardShimmer() // NEW: Show shimmer effect
+            ? _buildDashboardShimmer()
             : _errorMessage != null
                 ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
                 : RefreshIndicator(
@@ -148,7 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- NEW WIDGET: SKELETON LOADER FOR THE DASHBOARD ---
   Widget _buildDashboardShimmer() {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
@@ -189,8 +186,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
-  // (All other _build... helper widgets from before remain the same)
   Widget _buildCalorieSummaryCard(ThemeData theme) {
     final calorieGoal = (_profile?['daily_calorie_goal'] as num?)?.toDouble() ?? 2000.0;
     final netCalories = _totalCaloriesToday - _totalCaloriesBurnedToday;
