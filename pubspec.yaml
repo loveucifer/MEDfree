@@ -39,6 +39,8 @@ dependencies:
   fl_chart: ^0.68.0 # Add this line
   intl: ^0.19.0 # Ensure you have this for date formatting
   http: ^1.2.1 # Add this l
+  flutter_local_notifications: ^17.1.2 # Add this line
+  shared_preferences: ^2.2.3   
 
 dev_dependencies:
   flutter_test:

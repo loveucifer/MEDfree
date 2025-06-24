@@ -4,10 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'add_food_screen.dart';
 import 'add_exercise_screen.dart';
-import 'profile_screen.dart';
 
-
-// Models for our data
+// (The model classes FoodEntry and ExerciseEntry remain the same)
 class FoodEntry {
   final String name;
   final double calories;
@@ -30,6 +28,7 @@ class ExerciseEntry {
     );
 }
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -37,6 +36,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // (All the state variables and data fetching logic remain the same)
   Map<String, dynamic>? _profile;
   List<FoodEntry> _foodEntries = [];
   List<ExerciseEntry> _exerciseEntries = [];
@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _logWater(int quantity) async {
+   Future<void> _logWater(int quantity) async {
     try {
       await supabase.from('water_log').insert({'user_id': supabase.auth.currentUser!.id, 'quantity_ml': quantity});
       _fetchDashboardData();
@@ -117,37 +117,11 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context).pop();
         _logWater(amount);
       });
-
+      
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // REMOVED Scaffold and AppBar from here. The AppShell provides it.
+    // The Scaffold and AppBar are now gone from here.
     return Scaffold(
-        appBar: AppBar(
-        title: Text('Welcome, ${_profile?['full_name']?.split(' ')[0] ?? ''}'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
-        actions: [
-            IconButton(
-                icon: const Icon(Icons.person_outline),
-                onPressed: () async {
-                    final result = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                    if (result == true) {
-                    _fetchDashboardData();
-                    }
-                },
-                tooltip: 'Profile',
-            ),
-            IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () => supabase.auth.signOut(),
-                tooltip: 'Sign Out'
-            ),
-        ],
-        ),
         body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
@@ -155,15 +129,17 @@ class _HomeScreenState extends State<HomeScreen> {
               : RefreshIndicator(
                   onRefresh: _fetchDashboardData,
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80), // Add padding for FAB
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                     children: [
-                      _buildCalorieSummaryCard(theme),
+                      Text('Welcome back, ${_profile?['full_name']?.split(' ')[0] ?? ''}!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.normal)),
+                      const SizedBox(height: 16),
+                      _buildCalorieSummaryCard(Theme.of(context)),
                       const SizedBox(height: 24),
-                      _buildWaterSummaryCard(theme),
+                      _buildWaterSummaryCard(Theme.of(context)),
                       const SizedBox(height: 24),
-                      _buildTodaysMealsCard(theme),
+                      _buildTodaysMealsCard(Theme.of(context)),
                       const SizedBox(height: 24),
-                      _buildTodaysExercisesCard(theme),
+                      _buildTodaysExercisesCard(Theme.of(context)),
                     ],
                   ),
                 ),
@@ -171,8 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ALL THE _build... WIDGETS (like _buildCalorieSummaryCard) remain exactly the same as the previous step
-  Widget _buildCalorieSummaryCard(ThemeData theme) {
+  // All the _build... helper widgets from before remain the same
+  // ... _buildCalorieSummaryCard, _buildWaterSummaryCard, etc. ...
+    Widget _buildCalorieSummaryCard(ThemeData theme) {
     final calorieGoal = (_profile?['daily_calorie_goal'] as num?)?.toDouble() ?? 2000.0;
     // Updated calculation
     final netCalories = _totalCaloriesToday - _totalCaloriesBurnedToday;
@@ -258,7 +235,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // NEW WIDGET for showing today's logged exercises
   Widget _buildTodaysExercisesCard(ThemeData theme) {
     return Card(
       elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -287,7 +263,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ],);
   }
 
-  // NEW Speed Dial Floating Action Button
   Widget _buildSpeedDialFab() {
     return Wrap(
       direction: Axis.vertical,
@@ -319,8 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onPressed: onPressed,
       label: Text(label),
       icon: Icon(icon),
-      heroTag: null, // Important: each FAB needs a unique or null heroTag
+      heroTag: null,
     );
   }
-
 }

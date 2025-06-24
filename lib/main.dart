@@ -2,13 +2,18 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'app_shell.dart'; // Import the new AppShell
+import 'app_shell.dart';
 import 'screens/auth_screen.dart';
-import 'screens/onboarding_screen.dart'; 
+import 'screens/onboarding_screen.dart';
 import 'screens/splash_screen.dart';
+import 'services/notification_service.dart'; // Import the service
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize notification service
+  await NotificationService().init();
+
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -72,6 +77,7 @@ class MEDfreeApp extends StatelessWidget {
   }
 }
 
+// AuthGate remains the same
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -96,7 +102,6 @@ class AuthGate extends StatelessWidget {
               if (profile == null || profile['full_name'] == null) {
                 return const OnboardingScreen();
               }
-              // CHANGE THIS LINE: Go to AppShell instead of HomeScreen
               return const AppShell();
             },
           );
