@@ -2,11 +2,10 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../models/food_product.dart';
 import '../services/food_api_service.dart';
+import 'barcode_scanner_screen.dart'; // Import the new screen
 
 class AddFoodScreen extends StatefulWidget {
   const AddFoodScreen({super.key});
@@ -32,18 +31,15 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
     super.dispose();
   }
 
-  // --- Scan Logic ---
+  // --- UPDATED Scan Logic ---
   Future<void> _scanBarcode() async {
-    String barcodeScanRes;
-    try {
-      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-          '#E53935', 'Cancel', true, ScanMode.BARCODE);
-    } on PlatformException {
-      barcodeScanRes = 'Failed to get platform version.';
-    }
+    // 1. Navigate to our new scanner screen and wait for it to return a result.
+    final barcode = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+    );
 
-    if (!mounted || barcodeScanRes == '-1') {
-      // -1 means the user cancelled the scan
+    // 2. Check if the user cancelled or returned no code.
+    if (!mounted || barcode == null || barcode.isEmpty) {
       return;
     }
 
@@ -53,8 +49,9 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       _searchResults = [];
     });
 
+    // 3. Look up the product using the scanned barcode.
     try {
-      final product = await _foodApiService.lookupProductByBarcode(barcodeScanRes);
+      final product = await _foodApiService.lookupProductByBarcode(barcode);
       if (product != null) {
         _showLogDialog(product);
       } else {
@@ -176,6 +173,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The build method remains the same as before
     return Scaffold(
       appBar: AppBar(
         title: const Text('Find a Food'),
@@ -188,7 +186,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                // --- NEW SCAN BUTTON ---
                 ElevatedButton.icon(
                   onPressed: _scanBarcode,
                   icon: const Icon(Icons.qr_code_scanner),
@@ -205,7 +202,6 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                     Expanded(child: Divider()),
                 ]),
                 const SizedBox(height: 16),
-                // --- EXISTING SEARCH FIELD ---
                 TextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
@@ -231,9 +227,8 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       ),
     );
   }
-
+  
   Widget _buildResultsList() {
-    // (This build method remains the same)
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -255,9 +250,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
           title: Text(product.productName),
           subtitle: Text('${product.calories.toStringAsFixed(0)} kcal per 100g'),
           trailing: const Icon(Icons.add_circle_outline),
-          onTap: () {
-            _showLogDialog(product);
-          },
+          onTap: () => _showLogDialog(product),
         );
       },
     );

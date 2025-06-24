@@ -42,9 +42,9 @@ dependencies:
   flutter_local_notifications: ^17.1.2 # Add this line
   shared_preferences: ^2.2.3   
   shimmer: ^3.0.0 # Add this line
-  flutter_barcode_scanner: ^2.0.0 # Add this line
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.0
+  mobile_scanner: ^5.1.1 # Or the latest version
 
 dev_dependencies:
   flutter_test:
