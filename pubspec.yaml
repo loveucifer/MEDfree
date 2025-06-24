@@ -41,6 +41,7 @@ dependencies:
   http: ^1.2.1 # Add this l
   flutter_local_notifications: ^17.1.2 # Add this line
   shared_preferences: ^2.2.3   
+  shimmer: ^3.0.0 # Add this line
 
 dev_dependencies:
   flutter_test:

@@ -2,8 +2,9 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/progress_screen.dart';
-import 'screens/profile_screen.dart'; // Import profile screen
-import 'screens/settings_screen.dart'; // Import settings screen
+import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/friends_screen.dart'; // Import the new friends screen
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -15,10 +16,12 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
+  // Add FriendsScreen to the list of pages
   static const List<Widget> _pages = <Widget>[
     HomeScreen(),
     ProgressScreen(),
-    ProfileScreen(), // Add ProfileScreen here
+    FriendsScreen(), // New Screen
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -30,7 +33,6 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The AppBar is now part of the AppShell to be consistent across pages
       appBar: AppBar(
         title: Text(_getPageTitle(_selectedIndex)),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -55,6 +57,7 @@ class _AppShellState extends State<AppShell> {
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed, // Use this to allow more than 3 items
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
@@ -66,7 +69,12 @@ class _AppShellState extends State<AppShell> {
             activeIcon: Icon(Icons.timeline),
             label: 'Progress',
           ),
-          BottomNavigationBarItem( // Add this item
+          BottomNavigationBarItem( // New Item
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Friends',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Profile',
@@ -76,7 +84,7 @@ class _AppShellState extends State<AppShell> {
         selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
-        showUnselectedLabels: false,
+        showUnselectedLabels: true,
       ),
     );
   }
@@ -88,6 +96,8 @@ class _AppShellState extends State<AppShell> {
       case 1:
         return 'Progress';
       case 2:
+        return 'Friends'; // New Title
+      case 3:
         return 'Profile';
       default:
         return 'MEDfree';

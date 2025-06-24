@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shimmer/shimmer.dart'; // Import the shimmer package
+import '../widgets/skeleton_loader.dart'; // Import the skeleton widget
 import 'add_food_screen.dart';
 import 'add_exercise_screen.dart';
 
@@ -28,7 +30,6 @@ class ExerciseEntry {
     );
 }
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -36,7 +37,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // (All the state variables and data fetching logic remain the same)
   Map<String, dynamic>? _profile;
   List<FoodEntry> _foodEntries = [];
   List<ExerciseEntry> _exerciseEntries = [];
@@ -56,8 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchDashboardData() async {
+    // (This function remains the same)
     if (!mounted) return;
-    setState(() { _isLoading = true; _errorMessage = null; });
+    // Don't set isLoading to true here, we handle it with a delay to prevent flashes
+    // setState(() { _isLoading = true; _errorMessage = null; });
 
     try {
       final userId = supabase.auth.currentUser!.id;
@@ -71,14 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ]);
 
       _profile = responses[0] as Map<String, dynamic>;
-
       final foodResponse = responses[1] as List;
       _foodEntries = foodResponse.map((item) => FoodEntry.fromMap(item)).toList();
       _totalCaloriesToday = _foodEntries.fold(0, (sum, item) => sum + item.calories);
-
       final waterResponse = responses[2] as List;
       _totalWaterToday = waterResponse.fold(0, (sum, item) => sum + (item['quantity_ml'] as int));
-
       final exerciseResponse = responses[3] as List;
       _exerciseEntries = exerciseResponse.map((item) => ExerciseEntry.fromMap(item)).toList();
       _totalCaloriesBurnedToday = _exerciseEntries.fold(0, (sum, item) => sum + item.caloriesBurned);
@@ -90,7 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-   Future<void> _logWater(int quantity) async {
+  Future<void> _logWater(int quantity) async {
+    // (This function remains the same)
     try {
       await supabase.from('water_log').insert({'user_id': supabase.auth.currentUser!.id, 'quantity_ml': quantity});
       _fetchDashboardData();
@@ -100,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showAddWaterDialog() {
+    // (This function remains the same)
     showDialog(context: context, builder: (context) => AlertDialog(
           title: const Text('Add Water'),
           content: const Text('Select the amount of water you drank.'),
@@ -110,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ));
   }
-
+  
   Widget _buildWaterButton(int amount, String label) => TextButton(
       child: Text(label),
       onPressed: () {
@@ -120,82 +121,106 @@ class _HomeScreenState extends State<HomeScreen> {
       
   @override
   Widget build(BuildContext context) {
-    // The Scaffold and AppBar are now gone from here.
     return Scaffold(
+        // The body now conditionally shows the Shimmer or the real content
         body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
-              : RefreshIndicator(
-                  onRefresh: _fetchDashboardData,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                    children: [
-                      Text('Welcome back, ${_profile?['full_name']?.split(' ')[0] ?? ''}!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.normal)),
-                      const SizedBox(height: 16),
-                      _buildCalorieSummaryCard(Theme.of(context)),
-                      const SizedBox(height: 24),
-                      _buildWaterSummaryCard(Theme.of(context)),
-                      const SizedBox(height: 24),
-                      _buildTodaysMealsCard(Theme.of(context)),
-                      const SizedBox(height: 24),
-                      _buildTodaysExercisesCard(Theme.of(context)),
-                    ],
+            ? _buildDashboardShimmer() // NEW: Show shimmer effect
+            : _errorMessage != null
+                ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
+                : RefreshIndicator(
+                    onRefresh: _fetchDashboardData,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                      children: [
+                        Text('Welcome back, ${_profile?['full_name']?.split(' ')[0] ?? ''}!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.normal)),
+                        const SizedBox(height: 16),
+                        _buildCalorieSummaryCard(Theme.of(context)),
+                        const SizedBox(height: 24),
+                        _buildWaterSummaryCard(Theme.of(context)),
+                        const SizedBox(height: 24),
+                        _buildTodaysMealsCard(Theme.of(context)),
+                        const SizedBox(height: 24),
+                        _buildTodaysExercisesCard(Theme.of(context)),
+                      ],
+                    ),
                   ),
-                ),
         floatingActionButton: _buildSpeedDialFab(),
     );
   }
 
-  // All the _build... helper widgets from before remain the same
-  // ... _buildCalorieSummaryCard, _buildWaterSummaryCard, etc. ...
-    Widget _buildCalorieSummaryCard(ThemeData theme) {
+  // --- NEW WIDGET: SKELETON LOADER FOR THE DASHBOARD ---
+  Widget _buildDashboardShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        children: [
+          const Skeleton(width: 250, height: 32),
+          const SizedBox(height: 16),
+          // Calorie Card Skeleton
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16)
+            ),
+            child: const Column(
+              children: [
+                Skeleton(width: 120, height: 28),
+                SizedBox(height: 16),
+                Skeleton(width: 150, height: 150, radius: 75), // Circle
+                SizedBox(height: 20),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                    Column(children: [Skeleton(width: 60, height: 24), SizedBox(height: 4), Skeleton(width: 40, height: 18)]),
+                    Column(children: [Skeleton(width: 60, height: 24), SizedBox(height: 4), Skeleton(width: 40, height: 18)]),
+                    Column(children: [Skeleton(width: 60, height: 24), SizedBox(height: 4), Skeleton(width: 40, height: 18)]),
+                ],)
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Water and List Card Skeletons
+          const Skeleton(height: 130),
+          const SizedBox(height: 24),
+          const Skeleton(height: 200),
+        ],
+      ),
+    );
+  }
+
+
+  // (All other _build... helper widgets from before remain the same)
+  Widget _buildCalorieSummaryCard(ThemeData theme) {
     final calorieGoal = (_profile?['daily_calorie_goal'] as num?)?.toDouble() ?? 2000.0;
-    // Updated calculation
     final netCalories = _totalCaloriesToday - _totalCaloriesBurnedToday;
     final remaining = calorieGoal - netCalories;
     final progress = (netCalories / calorieGoal).clamp(0.0, 1.0);
-
     return Card(
-      elevation: 4,
-      shadowColor: Colors.red.withOpacity(0.2),
+      elevation: 4, shadowColor: Colors.red.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
+      child: Padding(padding: const EdgeInsets.all(20.0), child: Column(children: [
             Text('Net Calories', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.normal)),
             const SizedBox(height: 16),
-            SizedBox(
-              width: 150, height: 150,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
+            SizedBox(width: 150, height: 150, child: Stack(fit: StackFit.expand, children: [
                   CircularProgressIndicator(value: progress, strokeWidth: 12, backgroundColor: Colors.grey.shade200, valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)),
                   Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         Text(remaining.toStringAsFixed(0), style: theme.textTheme.headlineMedium),
                         Text('Remaining', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
                       ],),),
-                ],
-              ),
-            ),
+                ],),),
             const SizedBox(height: 20),
             Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
                 _buildStatColumn('Goal', calorieGoal.toStringAsFixed(0), theme),
                 _buildStatColumn('Food', _totalCaloriesToday.toStringAsFixed(0), theme),
                 _buildStatColumn('Burned', _totalCaloriesBurnedToday.toStringAsFixed(0), theme, color: theme.colorScheme.secondary),
               ],)
-          ],
-        ),
-      ),
-    );
+          ],),),);
   }
 
   Widget _buildWaterSummaryCard(ThemeData theme) {
      final progress = (_totalWaterToday / _waterGoal).clamp(0.0, 1.0);
-    return Card(
-      elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
+    return Card(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(children: [
              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -210,15 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('${_totalWaterToday.toStringAsFixed(0)} ml', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                 Text('${_waterGoal.toStringAsFixed(0)} ml Goal', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
               ],)
-          ],),
-      ),
-    );
+          ],),),);
   }
 
   Widget _buildTodaysMealsCard(ThemeData theme) {
-    return Card(
-      elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
+    return Card(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Today\'s Meals', style: theme.textTheme.headlineSmall), const SizedBox(height: 10),
@@ -230,15 +251,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     subtitle: Text(entry.mealType.toUpperCase()),
                     trailing: Text('${entry.calories.toStringAsFixed(0)} kcal', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
                     dense: true)).toList()),
-          ],),
-      ),
-    );
+          ],),),);
   }
 
   Widget _buildTodaysExercisesCard(ThemeData theme) {
-    return Card(
-      elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
+    return Card(elevation: 2, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Today\'s Exercises', style: theme.textTheme.headlineSmall), const SizedBox(height: 10),
@@ -249,11 +266,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: Text(entry.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                     trailing: Text('${entry.caloriesBurned.toStringAsFixed(0)} kcal burned', style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
                     dense: true)).toList()),
-          ],),
-      ),
-    );
+          ],),),);
   }
-
 
   Widget _buildStatColumn(String label, String value, ThemeData theme, {Color? color}) {
     return Column(children: [
@@ -264,11 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSpeedDialFab() {
-    return Wrap(
-      direction: Axis.vertical,
-      crossAxisAlignment: WrapCrossAlignment.end,
-      spacing: 12.0,
-      children: <Widget>[
+    return Wrap(direction: Axis.vertical, crossAxisAlignment: WrapCrossAlignment.end, spacing: 12.0, children: <Widget>[
         _buildFabChild(
           onPressed: () async {
             final result = await Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => const AddExerciseScreen()));
@@ -285,16 +295,10 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Log Meal',
           icon: Icons.fastfood,
         ),
-      ],
-    );
+      ],);
   }
 
   Widget _buildFabChild({required VoidCallback onPressed, required String label, required IconData icon}) {
-    return FloatingActionButton.extended(
-      onPressed: onPressed,
-      label: Text(label),
-      icon: Icon(icon),
-      heroTag: null,
-    );
+    return FloatingActionButton.extended(onPressed: onPressed, label: Text(label), icon: Icon(icon), heroTag: null);
   }
 }
