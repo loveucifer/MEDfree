@@ -1,6 +1,5 @@
 // lib/services/notification_service.dart
-
-// This import is the key part that defines the 'Time' class.
+import 'package:flutter/material.dart'; // Import material for TimeOfDay
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -49,11 +48,13 @@ class NotificationService {
         ?.requestNotificationsPermission();
   }
 
+  // --- MODIFIED METHOD SIGNATURE ---
+  // We now accept Flutter's built-in TimeOfDay directly.
   Future<void> scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
-    required Time scheduledTime,
+    required TimeOfDay scheduledTime,
   }) async {
     await flutterLocalNotificationsPlugin.zonedSchedule(
       id,
@@ -76,7 +77,9 @@ class NotificationService {
     );
   }
 
-  tz.TZDateTime _nextInstanceOfTime(Time time) {
+  // --- MODIFIED METHOD SIGNATURE ---
+  // This now takes TimeOfDay as well.
+  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate =
         tz.TZDateTime(tz.local, now.year, now.month, now.day, time.hour, time.minute);

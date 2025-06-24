@@ -1,7 +1,6 @@
 // lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -25,7 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
-    _notificationService.requestPermissions(); // Request permissions when screen is opened
+    _notificationService.requestPermissions();
   }
 
   Future<void> _loadSettings() async {
@@ -66,13 +65,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         id: notificationId,
         title: 'Time to log your $mealName!',
         body: 'Don\'t forget to track your meal to stay on top of your goals.',
-        scheduledTime: _convertTimeOfDay(time),
+        // --- THIS IS THE FIX ---
+        // We now pass the TimeOfDay object directly, which the
+        // corrected notification service is expecting.
+        scheduledTime: time,
       );
     } else {
       await _notificationService.cancelNotification(notificationId);
     }
     
-    // Reload settings to update UI
     _loadSettings();
   }
 
@@ -86,10 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // Helper to convert TimeOfDay to flutter_local_notifications' Time
-  Time _convertTimeOfDay(TimeOfDay time) {
-    return Time(time.hour, time.minute, 0);
-  }
+  // The problematic _convertTimeOfDay method has been completely removed.
 
   @override
   Widget build(BuildContext context) {
@@ -111,9 +109,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
             onTimeTap: () {
               _selectTime(context, _breakfastTime, (newTime) {
-                if (_breakfastReminder) { // Only update if reminder is active
+                if (_breakfastReminder) {
                    _updateReminder(enabled: true, time: newTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
-                } else { // if not active, just update the state
+                } else {
                     setState(() => _breakfastTime = newTime);
                 }
               });
