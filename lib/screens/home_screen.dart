@@ -2,12 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shimmer/shimmer.dart'; // Import the shimmer package
-import '../widgets/skeleton_loader.dart'; // Import the skeleton widget
+import 'package:shimmer/shimmer.dart'; 
+import '../widgets/skeleton_loader.dart'; 
 import 'add_food_screen.dart';
 import 'add_exercise_screen.dart';
 
-// (The model classes FoodEntry and ExerciseEntry remain the same)
+
 class FoodEntry {
   final String name;
   final double calories;

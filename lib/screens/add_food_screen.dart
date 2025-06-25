@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/food_product.dart';
 import '../services/food_api_service.dart';
-import 'barcode_scanner_screen.dart'; // Import the new screen
+import 'barcode_scanner_screen.dart'; 
 
 class AddFoodScreen extends StatefulWidget {
   const AddFoodScreen({super.key});
