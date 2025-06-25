@@ -13,8 +13,11 @@ Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
+    // Load environment variables
     await dotenv.load(fileName: ".env");
+    // Initialize notification services
     await NotificationService().init();
+    // Initialize Supabase
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -23,10 +26,12 @@ Future<void> main() async {
     runApp(const MEDfreeApp());
 
   } catch (error) {
+    // Run a fallback app if initialization fails
     runApp(ErrorApp(error: error.toString()));
   }
 }
 
+/// A fallback widget to display when critical initialization fails.
 class ErrorApp extends StatelessWidget {
   final String error;
   const ErrorApp({super.key, required this.error});
@@ -64,32 +69,33 @@ class ErrorApp extends StatelessWidget {
 
 final supabase = Supabase.instance.client;
 
+/// The root widget of the MEDfree application.
 class MEDfreeApp extends StatelessWidget {
   const MEDfreeApp({super.key});
 
-  // Define your new primary and secondary colors
-  static const Color primaryColor = Color(0xFFB085EF); // Lighter Purple: #B085EF
-  static const Color secondaryColor = Color(0xFF00B0F0); // Bright Blue: #00B0F0
+  // Define the application's primary and secondary colors based on the design.
+  static const Color primaryColor = Color(0xFFB085EF);   // Light Purple from image
+  static const Color secondaryColor = Color(0xFF00B0F0); // Bright Blue from image
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MEDfree',
       theme: ThemeData(
-        // Use your new colors
+        // Use the defined colors to create the theme.
         primarySwatch: _createMaterialColor(primaryColor),
-        scaffoldBackgroundColor: Colors.transparent, // Allow body to provide gradient
+        scaffoldBackgroundColor: Colors.transparent, // Required for gradient backgrounds.
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: _createMaterialColor(primaryColor),
           accentColor: secondaryColor,
         ).copyWith(
           primary: primaryColor,
-          onPrimary: Colors.white, // Text/icon color on primary background
+          onPrimary: Colors.white,
           secondary: secondaryColor,
-          onSecondary: Colors.white, // Text/icon color on secondary background
-          surface: Colors.white, // Card background (will be slightly opaque in cards)
-          onSurface: Colors.black87, // Text/icon color on card/surface
-          background: Colors.transparent, // Allow body to provide background
+          onSecondary: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black87,
+          background: Colors.transparent,
           onBackground: Colors.black87,
           error: Colors.redAccent,
           onError: Colors.white,
@@ -103,36 +109,19 @@ class MEDfreeApp extends StatelessWidget {
         cardTheme: CardThemeData(
           elevation: 4,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0), // Consistent rounded corners
+            borderRadius: BorderRadius.circular(20.0),
           ),
-          color: Colors.white.withOpacity(0.9), // Slightly transparent white for cards
+          color: Colors.white.withOpacity(0.9),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor, // Use new primary color
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: secondaryColor, // Use new secondary color
-            side: BorderSide(color: secondaryColor, width: 1.5), // Use new secondary color for border
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: primaryColor, // Use new primary color
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -147,7 +136,7 @@ class MEDfreeApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
-            borderSide: BorderSide(color: primaryColor, width: 2.0), // Use new primary color for focus
+            borderSide: const BorderSide(color: primaryColor, width: 2.0),
           ),
           labelStyle: TextStyle(color: Colors.grey.shade600),
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -158,6 +147,7 @@ class MEDfreeApp extends StatelessWidget {
     );
   }
 
+  /// Helper function to generate a MaterialColor swatch from a single Color.
   MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = {};
@@ -179,6 +169,7 @@ class MEDfreeApp extends StatelessWidget {
   }
 }
 
+/// Handles the authentication state and routes the user accordingly.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -192,6 +183,7 @@ class AuthGate extends StatelessWidget {
           .timeout(const Duration(seconds: 15));
       return response;
     } catch (e) {
+      // Throw a more user-friendly error message.
       throw Exception('Could not fetch user profile. Please check your network and try again.');
     }
   }
@@ -201,32 +193,33 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: supabase.auth.onAuthStateChange,
       builder: (context, snapshot) {
+        // Show splash screen while waiting for auth state.
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
-        if (snapshot.hasError) {
-          return const AuthScreen();
-        }
+
         final session = snapshot.data?.session;
+
+        // If user is logged in, check for their profile.
         if (session != null) {
           return FutureBuilder<Map<String, dynamic>?>(
             future: _getProfile(session.user.id),
             builder: (context, profileSnapshot) {
+              // Show splash screen while profile is loading.
               if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 return const SplashScreen();
               }
+              
+              // --- UPDATED ERROR HANDLING UI ---
+              // If there's an error loading the profile, show a themed error screen.
               if (profileSnapshot.hasError) {
-                // Ensure the error screen uses the new colors
                 return Scaffold(
                   body: Container(
                     width: double.infinity,
                     height: double.infinity,
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [
-                          MEDfreeApp.primaryColor, // Use new primary color
-                          MEDfreeApp.secondaryColor, // Use new secondary color
-                        ],
+                        colors: [MEDfreeApp.primaryColor, MEDfreeApp.secondaryColor],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -239,21 +232,21 @@ class AuthGate extends StatelessWidget {
                           children: [
                             Text(
                               "Error Loading Profile",
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white), // White text
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               profileSnapshot.error.toString(),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70), // Lighter white text
+                              style: const TextStyle(color: Colors.white70),
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: () => supabase.auth.signOut(),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white, // White button
-                                foregroundColor: MEDfreeApp.primaryColor, // Text color is primary
+                                backgroundColor: Colors.white,
+                                foregroundColor: MEDfreeApp.primaryColor,
                               ),
                               child: const Text("Sign Out & Try Again"),
                             )
@@ -264,14 +257,19 @@ class AuthGate extends StatelessWidget {
                   ),
                 );
               }
+
               final profile = profileSnapshot.data;
+              // If profile is incomplete, send to onboarding.
               if (profile == null || profile['full_name'] == null) {
                 return const OnboardingScreen();
               }
+              // Otherwise, user is fully authenticated and onboarded.
               return const AppShell();
             },
           );
         }
+
+        // If no session, show the authentication screen.
         return const AuthScreen();
       },
     );

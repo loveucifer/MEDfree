@@ -1,11 +1,12 @@
 // lib/app_shell.dart
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'main.dart'; // Import for theme colors
+import 'screens/home_screen.dart'; // <-- THIS IMPORT IS CRITICAL
 import 'screens/progress_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/friends_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -17,11 +18,13 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _pages = <Widget>[
-    HomeScreen(),
-    ProgressScreen(),
-    FriendsScreen(),
-    ProfileScreen(),
+  // NEW METHOD: Define the pages list inside the state.
+  // This is a more standard pattern and can be more robust with Flutter's build and state system.
+  final List<Widget> _pages = [
+    const HomeScreen(),
+    const ProgressScreen(),
+    const FriendsScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -30,6 +33,7 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  /// Returns the title for the current page.
   String _getPageTitle(int index) {
     switch (index) {
       case 0:
@@ -48,68 +52,59 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The scaffold background should be transparent to let the body of the child screen show through
+      // The Scaffold must be transparent to allow the Container's gradient to show.
       backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true, // Crucial to allow body content to extend under the transparent AppBar
+      // This allows the body content (the gradient) to extend behind the AppBar.
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: ShaderMask( // Apply gradient to text
-          shaderCallback: (bounds) {
-            return const LinearGradient(
-              colors: [
-                Color(0xFFEDE7F6), // Top left (white-ish)
-                Color(0xFF673AB7), // Bottom right (deep purple)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds);
-          },
-          child: Text(
-            _getPageTitle(_selectedIndex),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // This color will be masked by the shader
-            ),
-          ),
+        // The title is now a simple Text widget styled to be white.
+        title: Text(
+          _getPageTitle(_selectedIndex),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
         ),
-        // Make the AppBar transparent to let the flexibleSpace gradient show through
+        // A transparent background makes the body's gradient visible.
         backgroundColor: Colors.transparent,
-        elevation: 0, // No shadow
-        foregroundColor: Colors.white, // Default icon/text color for app bar
-        flexibleSpace: Container( // This container will provide the gradient background for the AppBar
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFFEDE7F6), // Top left (white-ish)
-                Color(0xFFD1C4E9), // Light purple
-                Color(0xFF9575CD), // Medium purple
-                Color(0xFF673AB7), // Bottom right (deep purple)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        elevation: 0, // No shadow for a cleaner look.
+        foregroundColor: Colors.white, // Sets the color for icons and text.
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined), // Inherits foregroundColor (white)
+            icon: const Icon(Icons.settings_outlined),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
             },
             tooltip: 'Settings & Reminders',
           ),
           IconButton(
-            icon: const Icon(Icons.logout), // Inherits foregroundColor (white)
+            icon: const Icon(Icons.logout),
             onPressed: () => Supabase.instance.client.auth.signOut(),
-            tooltip: 'Sign Out'
+            tooltip: 'Sign Out',
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
+      // The body of the Scaffold is a Container that provides the gradient background.
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              MEDfreeApp.primaryColor,
+              MEDfreeApp.secondaryColor,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        // IndexedStack efficiently switches between pages without losing their state.
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.fixed, // Ensures all labels are visible.
+        backgroundColor: Colors.white,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
@@ -133,8 +128,8 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.primary, // MediumPurple
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey[600],
         onTap: _onItemTapped,
         showUnselectedLabels: true,
       ),

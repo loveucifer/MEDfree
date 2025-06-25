@@ -3,42 +3,23 @@
 import 'package:flutter/material.dart';
 import '../main.dart'; // Import to access MEDfreeApp's defined colors
 
-class SplashScreen extends StatefulWidget { // Changed to StatefulWidget
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // The timer here is for internal operations of SplashScreen,
-    // the actual display duration is controlled by AuthGate.
-    _startSplashTimer();
-  }
-
-  void _startSplashTimer() async {
-    // This delay ensures any internal splash screen animations/operations
-    // have time to complete. The overall screen display time is handled
-    // by AuthGate to guarantee a minimum duration.
-    await Future.delayed(const Duration(seconds: 10)); // Increased to 5 seconds
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Ensure Scaffold is transparent
+      // The scaffold must be transparent to allow the container's gradient to be visible.
+      backgroundColor: Colors.transparent,
       body: Container(
         width: double.infinity,
         height: double.infinity,
+        // Apply the application's standard gradient background.
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            // Use the new colors for the splash screen gradient
             colors: [
-              MEDfreeApp.primaryColor, // Top-left lighter purple: #B085EF
-              MEDfreeApp.secondaryColor, // Bottom-right bright blue: #00B0F0
+              MEDfreeApp.primaryColor,   // Top-left purple
+              MEDfreeApp.secondaryColor, // Bottom-right blue
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -48,27 +29,29 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Larger "thrive being" image (corrected asset name)
+              // Display the main "thrive being" logo from assets.
               Image.asset(
-                'assets/thrive_being.png', // Corrected asset name
-                width: 250, // Adjust size as needed
+                'assets/thrive_being.png',
+                width: 250,
                 height: 250,
               ),
-              const SizedBox(height: 20), // Spacing between the two images/text
-              // Smaller "MEDfree" image/text (corrected asset name)
+              const SizedBox(height: 20),
+              // Display the "MEDfree" wordmark from assets.
               Image.asset(
-                'assets/medfree.png', // Corrected asset name
-                width: 150, // Adjust size as needed, smaller than the first
+                'assets/medfree.png',
+                width: 150,
                 height: 50,
               ),
-              const SizedBox(height: 40), // Spacing before the loading indicator
+              const SizedBox(height: 40),
+              // Show a loading indicator to signify that the app is loading data.
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary), // White
               ),
               const SizedBox(height: 20),
+              // Loading text to inform the user of the app's status.
               Text(
-                'Loading MEDfree...',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // Ensure text is visible
+                'Loading your wellness journey...',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
               ),
             ],
           ),

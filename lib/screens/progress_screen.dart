@@ -18,6 +18,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   List<FlSpot> _weightData = [];
   List<FlSpot> _calorieData = [];
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -26,26 +27,33 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
     _fetchChartData();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  /// Fetches chart data for weight and calories from the database.
   Future<void> _fetchChartData() async {
-    setState(() { _isLoading = true; });
+    if (!mounted) return;
+    setState(() { _isLoading = true; _errorMessage = null; });
+
     try {
       final userId = supabase.auth.currentUser!.id;
-      final now = DateTime.now();
-      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-      final formatter = DateFormat('yyyy-MM-dd');
-
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      
       // Fetch weight history
       final weightHistory = await supabase
           .from('weight_history')
           .select('weight_kg, logged_date')
           .eq('user_id', userId)
-          .gte('logged_date', formatter.format(thirtyDaysAgo))
+          .gte('logged_date', thirtyDaysAgo.toIso8601String())
           .order('logged_date', ascending: true);
 
       _weightData = weightHistory.map((row) {
           final date = DateTime.parse(row['logged_date']);
           final day = date.difference(thirtyDaysAgo).inDays.toDouble();
-          return FlSpot(day, row['weight_kg'].toDouble());
+          return FlSpot(day, (row['weight_kg'] as num).toDouble());
       }).toList();
 
       // Fetch calorie history
@@ -53,93 +61,84 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
           .from('food_diary')
           .select('calories, logged_date')
           .eq('user_id', userId)
-          .gte('logged_date', formatter.format(thirtyDaysAgo))
+          .gte('logged_date', thirtyDaysAgo.toIso8601String())
           .order('logged_date', ascending: true);
 
+      // Group calories by day
       final Map<double, double> dailyCalories = {};
       for (var row in foodDiary) {
         final date = DateTime.parse(row['logged_date']);
         final day = date.difference(thirtyDaysAgo).inDays.toDouble();
-        dailyCalories.update(day, (value) => value + row['calories'], ifAbsent: () => row['calories'].toDouble());
+        final calories = (row['calories'] as num).toDouble();
+        dailyCalories.update(day, (value) => value + calories, ifAbsent: () => calories);
       }
       _calorieData = dailyCalories.entries.map((e) => FlSpot(e.key, e.value)).toList();
 
     } catch(e) {
-      // Handle error
+      if (mounted) _errorMessage = "Could not load progress data.";
     } finally {
-      setState(() { _isLoading = false; });
+      if (mounted) setState(() { _isLoading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // The Scaffold is transparent to let the AppShell's gradient show through.
     return Scaffold(
-      backgroundColor: Colors.transparent, // Make Scaffold transparent
-      extendBodyBehindAppBar: true, // Allow body to extend behind app bar
-      appBar: AppBar(
-        title: Text(
-          'Your Progress',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
-        ),
-        backgroundColor: Colors.transparent, // Make AppBar transparent
-        elevation: 0, // No shadow
-        foregroundColor: Colors.white, // Default icon/text color for app bar
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white, // White label for selected tab
-          unselectedLabelColor: Colors.white70, // Lighter white for unselected
-          indicatorColor: Colors.white, // White indicator
-          tabs: const [
-            Tab(text: 'Weight'),
-            Tab(text: 'Calories'),
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // The TabBar is styled to be visible on the gradient background.
+            TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              tabs: const [
+                Tab(text: 'Weight'),
+                Tab(text: 'Calories'),
+              ],
+            ),
+            // The TabBarView fills the remaining space.
+            Expanded(
+              child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                : _errorMessage != null
+                  ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white, fontSize: 16)))
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildChartContainer('Weight (kg) over 30 Days', _weightData, Theme.of(context).colorScheme.primary),
+                        _buildChartContainer('Calories (kcal) over 30 Days', _calorieData, Theme.of(context).colorScheme.secondary),
+                      ],
+                  ),
+            ),
           ],
         ),
-      ),
-      body: Container( // Wrap body in a Container for the gradient background
-        width: double.infinity, // Ensure it fills width
-        height: double.infinity, // Ensure it fills height
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE0E0FF), // Very light lavender
-              Color(0xFFCCEEFF), // Light sky blue
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildChartContainer('Weight (kg)', _weightData, Theme.of(context).colorScheme.primary),
-                _buildChartContainer('Calories (kcal)', _calorieData, Theme.of(context).colorScheme.secondary),
-              ],
-          ),
       ),
     );
   }
 
+  /// Builds the container for a single chart.
   Widget _buildChartContainer(String title, List<FlSpot> data, Color lineColor) {
     if (data.isEmpty) {
-      return Center(child: Text('No data available for the last 30 days.', style: TextStyle(color: Colors.black54))); // Darker text for visibility
+      return Center(child: Text('No data available for the last 30 days.', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 16)));
     }
 
     return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Card( // Wrap chart in a Card to match the theme
-        elevation: 4,
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
           child: Column(
             children: [
-              Text(title, style: Theme.of(context).textTheme.headlineSmall), // Uses default black text for card
+              Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20)),
               const SizedBox(height: 32),
               Expanded(
                 child: LineChart(
                   LineChartData(
-                    gridData: FlGridData(show: false),
+                    gridData: const FlGridData(show: false),
                     titlesData: FlTitlesData(
                       show: true,
                       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -147,33 +146,30 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
                       bottomTitles: AxisTitles(sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 30,
+                        interval: 14, // Show a label every 14 days
                         getTitlesWidget: (value, meta) {
-                            // Shows dates for start, middle, and end of the 30-day period
-                            if (value.toInt() == 0 || value.toInt() == 15 || value.toInt() == 30) {
-                                final date = DateTime.now().subtract(Duration(days: 30 - value.toInt()));
-                                return SideTitleWidget(axisSide: meta.axisSide, child: Text(DateFormat.MMMd().format(date), style: const TextStyle(color: Colors.black87))); // Darker text for axis labels
-                            }
-                            return const Text('');
+                            final date = DateTime.now().subtract(Duration(days: 30 - value.toInt()));
+                            return SideTitleWidget(axisSide: meta.axisSide, child: Text(DateFormat.MMMd().format(date), style: const TextStyle(fontSize: 12)));
                         }
                       )),
                       leftTitles: AxisTitles(sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 40,
+                        reservedSize: 42,
                         getTitlesWidget: (value, meta) {
-                          return SideTitleWidget(axisSide: meta.axisSide, child: Text(value.toInt().toString(), style: const TextStyle(color: Colors.black87))); // Darker text for axis labels
+                          return SideTitleWidget(axisSide: meta.axisSide, space: 8.0, child: Text(value.toInt().toString(), style: const TextStyle(fontSize: 12)));
                         },
                       )),
                     ),
-                    borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade400, width: 1)), // Lighter border color
+                    borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300, width: 1)),
                     lineBarsData: [
                       LineChartBarData(
                         spots: data,
                         isCurved: true,
                         color: lineColor,
-                        barWidth: 5,
+                        barWidth: 4,
                         isStrokeCapRound: true,
                         dotData: const FlDotData(show: false),
-                        belowBarData: BarAreaData(show: true, color: lineColor.withOpacity(0.3)),
+                        belowBarData: BarAreaData(show: true, color: lineColor.withOpacity(0.2)),
                       )
                     ],
                   ),

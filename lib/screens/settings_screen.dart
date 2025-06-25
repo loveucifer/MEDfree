@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/notification_service.dart';
+import '../main.dart'; // Import for theme colors
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // State for reminder toggles and times
   bool _breakfastReminder = false;
   TimeOfDay _breakfastTime = const TimeOfDay(hour: 8, minute: 0);
   bool _lunchReminder = false;
@@ -27,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _notificationService.requestPermissions();
   }
 
+  /// Loads saved notification settings from SharedPreferences.
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -48,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  /// Updates a reminder's state and schedules or cancels the notification.
   Future<void> _updateReminder({
     required bool enabled,
     required TimeOfDay time,
@@ -71,25 +75,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _notificationService.cancelNotification(notificationId);
     }
 
+    // Reload settings to reflect changes immediately in the UI.
     _loadSettings();
   }
 
+  /// Shows a time picker dialog styled to match the app theme.
   Future<void> _selectTime(BuildContext context, TimeOfDay initialTime, Function(TimeOfDay) onTimeSelected) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: initialTime,
-      builder: (context, child) { // Custom builder for the time picker to inherit theme
+      builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).colorScheme.primary, // Your app's primary color
-              onPrimary: Theme.of(context).colorScheme.onPrimary, // White
-              surface: Colors.white, // Background of the time picker dialog
-              onSurface: Colors.black87, // Text/icon color on the time picker background
-            ),
+                  primary: MEDfreeApp.primaryColor,
+                  onPrimary: Colors.white,
+                  surface: Colors.white,
+                  onSurface: Colors.black87,
+                ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary, // Buttons in dialog
+                foregroundColor: MEDfreeApp.primaryColor,
               ),
             ),
           ),
@@ -105,22 +111,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Make Scaffold transparent
+      // The background is transparent to let the AppShell's gradient show.
+      backgroundColor: Colors.transparent,
+      // The AppBar is now provided by the AppShell.
       appBar: AppBar(
-        title: Text(
-          'Notifications & Reminders',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
-        ),
-        backgroundColor: Colors.transparent, // Make AppBar transparent
-        elevation: 0, // No shadow
-        foregroundColor: Colors.white, // Default icon/text color for app bar
+        title: const Text('Notifications & Reminders'),
+        backgroundColor: MEDfreeApp.primaryColor, // Matching AppBar color
+        elevation: 0,
       ),
-      body: Container( // Wrap body in a Container for the gradient background
+      body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color(0xFFE0E0FF), // Very light lavender
-              Color(0xFFCCEEFF), // Light sky blue
+              MEDfreeApp.primaryColor,
+              MEDfreeApp.secondaryColor,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -138,11 +142,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               onTimeTap: () {
                 _selectTime(context, _breakfastTime, (newTime) {
-                  if (_breakfastReminder) {
-                     _updateReminder(enabled: true, time: newTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
-                  } else {
-                      setState(() => _breakfastTime = newTime);
-                  }
+                  // If the reminder is already on, update it immediately. Otherwise, just update the time state.
+                  _updateReminder(enabled: _breakfastReminder, time: newTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
                 });
               }
             ),
@@ -155,11 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               onTimeTap: () {
                 _selectTime(context, _lunchTime, (newTime) {
-                  if (_lunchReminder) {
-                     _updateReminder(enabled: true, time: newTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
-                  } else {
-                      setState(() => _lunchTime = newTime);
-                  }
+                   _updateReminder(enabled: _lunchReminder, time: newTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
                 });
               }
             ),
@@ -172,11 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               onTimeTap: () {
                 _selectTime(context, _dinnerTime, (newTime) {
-                  if (_dinnerReminder) {
-                     _updateReminder(enabled: true, time: newTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
-                  } else {
-                      setState(() => _dinnerTime = newTime);
-                  }
+                   _updateReminder(enabled: _dinnerReminder, time: newTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
                 });
               }
             ),
@@ -186,6 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Builds a single reminder setting tile.
   Widget _buildReminderTile({
     required String title,
     required bool value,
@@ -194,22 +188,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTimeTap
   }) {
     return Card(
-      elevation: 2,
-      // Card shape and color inherited from main.dart
+      // The Card theme from main.dart provides the styling.
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)), // Dark text
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: GestureDetector(
             onTap: onTimeTap,
             child: Text(
               'Remind me at: ${time.format(context)}',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary), // Uses primary color (MediumPurple)
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
             ),
           ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: Theme.of(context).colorScheme.primary, // Uses primary color (MediumPurple)
+          activeColor: Theme.of(context).colorScheme.primary,
         ),
       ),
     );

@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.0 <4.0.0' # Using a broader range is safer
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -38,25 +38,19 @@ flutter:
   assets:
     - .env
     # Ensure these asset paths match the actual filenames in your assets/ directory
-    - assets/thrive_being.png # Added for the larger splash image
-    - assets/medfree.png # Added for the smaller splash image
-    # If you still have a generic splash_logo.png for native splash, keep it.
-    # Otherwise, you might want to remove it or update flutter_native_splash to use thrivebeing_white.png
-    - assets/splash_logo.png # Keeping this for flutter_native_splash config based on prior conversation
-  # -----------------------------
+    - assets/thrive_being.png
+    - assets/medfree.png
+    - assets/splash_logo.png
 
-# It's good practice to add the configuration for these packages here
-# so you don't lose it.
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon.png" # You might want to update this to your app icon
+  image_path: "assets/icon.png"
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#FFFFFF" # A fallback color for the native splash.
-  # Update this to use the image you prefer for the *native* splash
-  image: assets/thrive_being.png # Updated to use one of the new main splash images
+  color: "#FFFFFF"
+  image: assets/thrive_being.png
   android: true
   ios: true
   android_gravity: center

@@ -1,7 +1,6 @@
 // lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,6 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // Controllers for the form fields
   final _nameController = TextEditingController();
   final _heightController = TextEditingController();
   final _currentWeightController = TextEditingController();
@@ -36,24 +36,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  /// Loads the user's profile data from the database.
   Future<void> _loadProfile() async {
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
       final userId = supabase.auth.currentUser!.id;
       final data = await supabase.from('profiles').select().eq('id', userId).single();
 
+      // Populate controllers with existing data
       _nameController.text = data['full_name'] ?? '';
       _heightController.text = (data['height_cm'] ?? '').toString();
       _currentWeightController.text = (data['current_weight_kg'] ?? '').toString();
       _goalWeightController.text = (data['goal_weight_kg'] ?? '').toString();
 
     } catch (e) {
-      setState(() { _errorMessage = "Could not load profile."; });
+      if(mounted) setState(() { _errorMessage = "Could not load profile."; });
     } finally {
-      setState(() { _isLoading = false; });
+      if(mounted) setState(() { _isLoading = false; });
     }
   }
 
+  /// Updates the user's profile and logs weight history.
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -64,15 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final userId = supabase.auth.currentUser!.id;
       final newWeight = double.tryParse(_currentWeightController.text.trim());
 
-      final updates = {
-        'id': userId,
-        'full_name': _nameController.text.trim(),
-        'height_cm': int.tryParse(_heightController.text.trim()),
-        'current_weight_kg': newWeight,
-        'goal_weight_kg': double.tryParse(_goalWeightController.text.trim()),
-      };
-
-      // Use a transaction to update profile and log weight history together
+      // Use the 'update_profile_and_log_weight' RPC to perform a transaction
       await supabase.rpc('update_profile_and_log_weight', params: {
           'p_user_id': userId,
           'p_full_name': _nameController.text.trim(),
@@ -87,7 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Text('Profile updated successfully!'),
           backgroundColor: Colors.green,
         ));
-        Navigator.of(context).pop(true); // Pop and signal refresh
       }
     } catch (e) {
        if (mounted) {
@@ -106,47 +100,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent, // Make Scaffold transparent
-      extendBodyBehindAppBar: true, // Allow body to extend behind app bar
-      appBar: AppBar(
-        title: Text(
-          'Edit Profile',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
-        ),
-        backgroundColor: Colors.transparent, // Make AppBar transparent
-        elevation: 0, // No shadow
-        foregroundColor: Colors.white, // Default icon/text color for app bar
-      ),
-      body: Container( // Wrap body in a Container for the gradient background
-        width: double.infinity, // Ensure it fills width
-        height: double.infinity, // Ensure it fills height
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFE0E0FF), // Very light lavender
-              Color(0xFFCCEEFF), // Light sky blue
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: Colors.white))
             : _errorMessage != null
-                ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
+                ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white, fontSize: 16)))
                 : Form(
                     key: _formKey,
                     child: ListView(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.all(16.0),
                       children: [
-                        _buildTextFormField(controller: _nameController, label: 'Full Name', validator: _requiredValidator),
-                        const SizedBox(height: 16),
-                        _buildTextFormField(controller: _heightController, label: 'Height (cm)', keyboardType: TextInputType.number, validator: _requiredValidator),
-                        const SizedBox(height: 16),
-                        _buildTextFormField(controller: _currentWeightController, label: 'Current Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
-                        const SizedBox(height: 16),
-                        _buildTextFormField(controller: _goalWeightController, label: 'Goal Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
-                        const SizedBox(height: 40),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Column(
+                              children: [
+                                _buildTextFormField(controller: _nameController, label: 'Full Name', validator: _requiredValidator),
+                                const SizedBox(height: 16),
+                                _buildTextFormField(controller: _heightController, label: 'Height (cm)', keyboardType: TextInputType.number, validator: _requiredValidator),
+                                const SizedBox(height: 16),
+                                _buildTextFormField(controller: _currentWeightController, label: 'Current Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
+                                const SizedBox(height: 16),
+                                _buildTextFormField(controller: _goalWeightController, label: 'Goal Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         ElevatedButton(
                           onPressed: _isLoading ? null : _updateProfile,
                           child: Text(_isLoading ? 'Saving...' : 'Save Changes'),
@@ -158,30 +139,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Helper widget to build a consistently styled TextFormField.
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    // These TextFormField styles are mostly inherited from main.dart, but can be overridden here
-    // for specific screens if needed.
+    // This TextFormField uses the styles defined in the main.dart InputDecorationTheme.
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        // Ensure label and hint text are visible on the background, if not white already
-        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
-        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]), // Lighter hint text
-        filled: true, // Make sure it's filled to show background
-        fillColor: Colors.white.withOpacity(0.9), // White background for text fields
+        filled: true,
+        fillColor: Colors.grey.shade100, // Light fill for contrast inside the card
       ),
       keyboardType: keyboardType,
       validator: validator,
-      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for input
     );
   }
 
+  /// A simple validator to ensure a field is not empty.
   String? _requiredValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'This field is required';
