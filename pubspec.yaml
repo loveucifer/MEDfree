@@ -1,6 +1,6 @@
 name: medfree
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -26,19 +26,21 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  
+
   flutter_lints: ^3.0.0
-  
+
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.0
 
 flutter:
   uses-material-design: true
-  
+
   # --- THIS IS THE CRUCIAL FIX ---
   # This section tells Flutter to include the .env file in the build.
   assets:
     - .env
+    # Add your new splash image here
+    - assets/splash_logo.png # <--- ADD THIS LINE assuming you put the image in assets/ and named it splash_logo.png
   # -----------------------------
 
 # It's good practice to add the configuration for these packages here
@@ -46,12 +48,15 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/icon.png" # You might want to update this to your app icon
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#FAFAFA"
-  image: assets/icon.png
+  color: "#FFFFFF" # A fallback color for the native splash. The Flutter splash screen will handle the gradient.
+  image: assets/splash_logo.png # <--- UPDATE THIS LINE to point to your new splash image
   android: true
   ios: true
-
+  # Add this if you want to preserve the icon on the native splash until Flutter loads
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: true

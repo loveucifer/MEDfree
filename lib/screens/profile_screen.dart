@@ -41,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final userId = supabase.auth.currentUser!.id;
       final data = await supabase.from('profiles').select().eq('id', userId).single();
-      
+
       _nameController.text = data['full_name'] ?? '';
       _heightController.text = (data['height_cm'] ?? '').toString();
       _currentWeightController.text = (data['current_weight_kg'] ?? '').toString();
@@ -63,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final userId = supabase.auth.currentUser!.id;
       final newWeight = double.tryParse(_currentWeightController.text.trim());
-      
+
       final updates = {
         'id': userId,
         'full_name': _nameController.text.trim(),
@@ -71,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'current_weight_kg': newWeight,
         'goal_weight_kg': double.tryParse(_goalWeightController.text.trim()),
       };
-      
+
       // Use a transaction to update profile and log weight history together
       await supabase.rpc('update_profile_and_log_weight', params: {
           'p_user_id': userId,
@@ -105,37 +105,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ... (The build method remains exactly the same as the previous step)
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        title: const Text('Edit Profile'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        title: Text(
+          'Edit Profile',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
+        ),
+        backgroundColor: Colors.transparent, // Make AppBar transparent
+        elevation: 0, // No shadow
+        foregroundColor: Colors.white, // Default icon/text color for app bar
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!))
-              : Form(
-                  key: _formKey,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24.0),
-                    children: [
-                      _buildTextFormField(controller: _nameController, label: 'Full Name', validator: _requiredValidator),
-                      const SizedBox(height: 16),
-                      _buildTextFormField(controller: _heightController, label: 'Height (cm)', keyboardType: TextInputType.number, validator: _requiredValidator),
-                      const SizedBox(height: 16),
-                      _buildTextFormField(controller: _currentWeightController, label: 'Current Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
-                      const SizedBox(height: 16),
-                      _buildTextFormField(controller: _goalWeightController, label: 'Goal Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
-                      const SizedBox(height: 40),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _updateProfile,
-                        child: Text(_isLoading ? 'Saving...' : 'Save Changes'),
-                      )
-                    ],
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+                ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)))
+                : Form(
+                    key: _formKey,
+                    child: ListView(
+                      padding: const EdgeInsets.all(24.0),
+                      children: [
+                        _buildTextFormField(controller: _nameController, label: 'Full Name', validator: _requiredValidator),
+                        const SizedBox(height: 16),
+                        _buildTextFormField(controller: _heightController, label: 'Height (cm)', keyboardType: TextInputType.number, validator: _requiredValidator),
+                        const SizedBox(height: 16),
+                        _buildTextFormField(controller: _currentWeightController, label: 'Current Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
+                        const SizedBox(height: 16),
+                        _buildTextFormField(controller: _goalWeightController, label: 'Goal Weight (kg)', keyboardType: const TextInputType.numberWithOptions(decimal: true), validator: _requiredValidator),
+                        const SizedBox(height: 40),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _updateProfile,
+                          child: Text(_isLoading ? 'Saving...' : 'Save Changes'),
+                        )
+                      ],
+                    ),
                   ),
-                ),
+      ),
     );
   }
 
@@ -145,11 +161,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    // These TextFormField styles are mostly inherited from main.dart, but can be overridden here
+    // for specific screens if needed.
     return TextFormField(
       controller: controller,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        // Ensure label and hint text are visible on the background, if not white already
+        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
+        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]), // Lighter hint text
+      ),
       keyboardType: keyboardType,
       validator: validator,
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for input
     );
   }
 

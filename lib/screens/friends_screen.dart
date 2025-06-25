@@ -23,7 +23,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
 
   // State for Requests Tab
   late Future<List<Map<String, dynamic>>> _pendingRequestsFuture;
-  
+
   // State for Friends Tab
   late Future<List<Map<String, dynamic>>> _friendsFuture;
 
@@ -34,7 +34,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     _tabController.addListener(_handleTabSelection);
     _loadFutures();
   }
-  
+
   void _loadFutures() {
     _pendingRequestsFuture = _getPendingRequests();
     _friendsFuture = _getFriends();
@@ -68,7 +68,6 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
   }
 
   Future<void> _searchUsers(String query) async {
-    // (This function remains the same as before)
     if (query.length < 3) {
       setState(() { _searchResults = []; _searchMessage = 'Please enter at least 3 characters.'; });
       return;
@@ -87,7 +86,6 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
   }
 
   Future<void> _sendFriendRequest(String friendId) async {
-    // (This function remains the same as before)
     try {
       final currentUserId = supabase.auth.currentUser!.id;
       final userOne = currentUserId.compareTo(friendId) < 0 ? currentUserId : friendId;
@@ -109,10 +107,6 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     return await supabase.rpc('get_pending_requests');
   }
 
-  Future<List<Map<String, dynamic>>> _getFriends() async {
-    return await supabase.rpc('get_friends');
-  }
-
   Future<void> _acceptRequest(String friendId) async {
     await supabase.rpc('update_friendship_status', params: {'p_friend_id': friendId, 'p_new_status': 'accepted'});
     setState(() { _loadFutures(); }); // Refresh lists
@@ -123,51 +117,78 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
     setState(() { _loadFutures(); }); // Refresh lists
   }
 
+  Future<List<Map<String, dynamic>>> _getFriends() async {
+    return await supabase.rpc('get_friends');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Theme.of(context).colorScheme.primary,
-          tabs: const [
-            Tab(text: 'Search'),
-            Tab(text: 'Requests'),
-            Tab(text: 'Friends'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildSearchTab(),
-              _buildFutureList(
-                future: _pendingRequestsFuture,
-                emptyMessage: "No pending friend requests.",
-                itemBuilder: (user) => ListTile(
-                  title: Text(user['full_name']),
-                  subtitle: Text(user['email']),
-                  trailing: Wrap(spacing: 4, children: [
-                    IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _acceptRequest(user['id'])),
-                    IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => _removeFriendship(user['id'])),
-                  ],),
-                ),
-              ),
-              _buildFutureList(
-                future: _friendsFuture,
-                emptyMessage: "You haven't added any friends yet.",
-                itemBuilder: (user) => ListTile(
-                  title: Text(user['full_name']),
-                  subtitle: Text(user['email']),
-                  trailing: IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.grey), onPressed: () => _removeFriendship(user['id'])),
-                ),
-              ),
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
-      ],
+        child: Column(
+          children: [
+            TabBar(
+              controller: _tabController,
+              labelColor: Colors.white, // White label for selected tab
+              unselectedLabelColor: Colors.white70, // Lighter white for unselected
+              indicatorColor: Colors.white, // White indicator
+              tabs: const [
+                Tab(text: 'Search'),
+                Tab(text: 'Requests'),
+                Tab(text: 'Friends'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildSearchTab(),
+                  _buildFutureList(
+                    future: _pendingRequestsFuture,
+                    emptyMessage: "No pending friend requests.",
+                    itemBuilder: (user) => Card( // Wrap ListTile in Card
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(user['full_name'], style: const TextStyle(color: Colors.black87)),
+                        subtitle: Text(user['email'], style: const TextStyle(color: Colors.grey)),
+                        trailing: Wrap(spacing: 4, children: [
+                          IconButton(icon: const Icon(Icons.check_circle, color: Colors.green), onPressed: () => _acceptRequest(user['id'])),
+                          IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => _removeFriendship(user['id'])),
+                        ],),
+                      ),
+                    ),
+                  ),
+                  _buildFutureList(
+                    future: _friendsFuture,
+                    emptyMessage: "You haven't added any friends yet.",
+                    itemBuilder: (user) => Card( // Wrap ListTile in Card
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        title: Text(user['full_name'], style: const TextStyle(color: Colors.black87)),
+                        subtitle: Text(user['email'], style: const TextStyle(color: Colors.grey)),
+                        trailing: IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.grey), onPressed: () => _removeFriendship(user['id'])),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -179,7 +200,15 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
           child: TextField(
             controller: _searchController,
             onChanged: _onSearchChanged,
-            decoration: InputDecoration(hintText: 'Search by full name...'),
+            decoration: InputDecoration(
+              hintText: 'Search by full name...',
+              // Inherits overall InputDecorationTheme, but specify colors for visibility
+              labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87),
+              hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]),
+              fillColor: Colors.white.withOpacity(0.9), // Add a subtle fill color
+              filled: true,
+            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Input text color
           ),
         ),
         Expanded(
@@ -190,17 +219,21 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
                       itemCount: _searchResults.length,
                       itemBuilder: (context, index) {
                         final user = _searchResults[index];
-                        return ListTile(
-                          title: Text(user['full_name']),
-                          subtitle: Text(user['email']),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.person_add_alt_1_outlined),
-                            onPressed: () => _sendFriendRequest(user['id']),
+                        return Card( // Wrap ListTile in Card
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: ListTile(
+                            title: Text(user['full_name'], style: const TextStyle(color: Colors.black87)),
+                            subtitle: Text(user['email'], style: const TextStyle(color: Colors.grey)),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.person_add_alt_1_outlined),
+                              onPressed: () => _sendFriendRequest(user['id']),
+                            ),
                           ),
                         );
                       },
                     )
-                  : Center(child: Text(_searchMessage, style: TextStyle(color: Colors.grey[600]))),
+                  : Center(child: Text(_searchMessage, style: TextStyle(color: Colors.black54))), // Darker text
         ),
       ],
     );
@@ -222,7 +255,7 @@ class _FriendsScreenState extends State<FriendsScreen> with SingleTickerProvider
         }
         final items = snapshot.data ?? [];
         if (items.isEmpty) {
-          return Center(child: Text(emptyMessage, style: TextStyle(color: Colors.grey[600])));
+          return Center(child: Text(emptyMessage, style: TextStyle(color: Colors.black54))); // Darker text
         }
         return ListView.builder(
           itemCount: items.length,

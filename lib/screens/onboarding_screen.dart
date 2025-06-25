@@ -39,6 +39,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
+      builder: (context, child) { // Custom builder for the date picker to inherit theme
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: Theme.of(context).colorScheme.primary, // Your app's primary color
+              onPrimary: Theme.of(context).colorScheme.onPrimary, // White
+              surface: Colors.white, // Background of the date picker dialog
+              onSurface: Colors.black87, // Text/icon color on the date picker background
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary, // Buttons in dialog
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -61,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
       return;
     }
-    
+
     setState(() { _isLoading = true; });
 
     try {
@@ -85,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (mounted) {
          Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const AuthGate()), 
+          MaterialPageRoute(builder: (context) => const AuthGate()),
           (route) => false,
         );
       }
@@ -105,27 +123,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        backgroundColor: Colors.transparent, elevation: 0,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: _pageController.hasClients && _pageController.page?.round() != 0
             ? IconButton(
-                icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.primary),
+                icon: const Icon(Icons.arrow_back, color: Colors.white), // White icon
                 onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
               )
             : null,
       ),
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: [
-          _buildTextPage("What's your full name?", _nameController, "e.g. John Doe"),
-          _buildDatePage("What's your date of birth?", _selectDate),
-          _buildChoicePage<String>("Select your gender", _selectedGender, ['male', 'female', 'other'], (value) => setState(() => _selectedGender = value)),
-          _buildTextPage("What's your height in cm?", _heightController, "e.g. 175", keyboardType: TextInputType.number),
-          _buildTextPage("What's your current weight in kg?", _currentWeightController, "e.g. 70.5", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-          _buildTextPage("What's your goal weight in kg?", _goalWeightController, "e.g. 65", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-          _buildChoicePage<String>("Describe your activity level", _selectedActivityLevel, ['sedentary', 'light', 'moderate', 'active'], (value) => setState(() => _selectedActivityLevel = value)),
-        ],
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFEDE7F6), // Top left (white-ish)
+              Color(0xFFD1C4E9), // Light purple
+              Color(0xFF9575CD), // Medium purple
+              Color(0xFF673AB7), // Bottom right (deep purple)
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            _buildTextPage("What's your full name?", _nameController, "e.g. John Doe"),
+            _buildDatePage("What's your date of birth?", _selectDate),
+            _buildChoicePage<String>("Select your gender", _selectedGender, ['male', 'female', 'other'], (value) => setState(() => _selectedGender = value)),
+            _buildTextPage("What's your height in cm?", _heightController, "e.g. 175", keyboardType: TextInputType.number),
+            _buildTextPage("What's your current weight in kg?", _currentWeightController, "e.g. 70.5", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+            _buildTextPage("What's your goal weight in kg?", _goalWeightController, "e.g. 65", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+            _buildChoicePage<String>("Describe your activity level", _selectedActivityLevel, ['sedentary', 'light', 'moderate', 'active'], (value) => setState(() => _selectedActivityLevel = value)),
+          ],
+        ),
       ),
     );
   }
@@ -137,15 +171,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+          Text(title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white), textAlign: TextAlign.center), // White text for title
           const SizedBox(height: 40),
           child,
           const Spacer(),
           if (_isLoading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) // White indicator
           else
             ElevatedButton(
               onPressed: isFinalPage ? _submitProfile : _nextPage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white, // White button for contrast
+                foregroundColor: Theme.of(context).colorScheme.primary, // Text color matches primary
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               child: Text(isFinalPage ? 'Finish Setup' : 'Continue'),
             ),
           const SizedBox(height: 40),
@@ -158,23 +201,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return _buildPage(title: title, child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        decoration: InputDecoration(labelText: hint),
+        decoration: InputDecoration(
+          labelText: hint,
+          labelStyle: const TextStyle(color: Colors.white70), // White text for labels
+          hintStyle: const TextStyle(color: Colors.white54), // Lighter white hint text
+          enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white70, width: 1.0),
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white, width: 2.0),
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          ),
+        ),
         textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 22),
+        style: const TextStyle(fontSize: 22, color: Colors.white), // White input text
       ),
     );
   }
-  
+
   Widget _buildDatePage(String title, Function(BuildContext) pickDate) {
     return _buildPage(title: title, child: GestureDetector(
         onTap: () => pickDate(context),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.white70), // White border
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white.withOpacity(0.2), // Slightly transparent white fill
+          ),
           child: Text(
             _selectedDate == null ? 'Select Date' : '${_selectedDate!.toLocal()}'.split(' ')[0],
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, color: Colors.black54),
+            style: const TextStyle(fontSize: 22, color: Colors.white), // White text
           ),
         ),
       ),
@@ -187,19 +246,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: title, isFinalPage: isFinalPage,
       child: Column(
         children: items.map((item) {
-          return Card(
-             color: groupValue == item ? Theme.of(context).colorScheme.secondary.withOpacity(0.3) : Colors.white,
+          return Card( // Use Card for consistent styling
+             color: groupValue == item
+                 ? Theme.of(context).colorScheme.primary.withOpacity(0.7) // Darker purple when selected
+                 : Colors.white.withOpacity(0.9), // Slightly transparent white when not selected
             elevation: groupValue == item ? 4 : 1,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: groupValue == item ? Theme.of(context).colorScheme.primary : Colors.grey.shade300, width: 2)),
+                side: BorderSide(color: groupValue == item ? Colors.white : Colors.grey.shade300, width: 2)), // White border when selected
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: InkWell(
               onTap: () => onChanged(item),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: Row(children: [Text(item.toString().toUpperCase(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: groupValue == item ? Theme.of(context).colorScheme.primary : Colors.black87))]),
+                child: Row(children: [Text(item.toString().toUpperCase(),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: groupValue == item ? Colors.white : Colors.black87 // White text when selected, black otherwise
+                    ))
+                ]),
               ),
             ),
           );

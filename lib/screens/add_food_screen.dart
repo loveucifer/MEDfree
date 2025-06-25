@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/food_product.dart';
 import '../services/food_api_service.dart';
-import 'barcode_scanner_screen.dart'; 
+import 'barcode_scanner_screen.dart';
 
 class AddFoodScreen extends StatefulWidget {
   const AddFoodScreen({super.key});
@@ -33,12 +33,10 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   // --- UPDATED Scan Logic ---
   Future<void> _scanBarcode() async {
-    // 1. Navigate to our new scanner screen and wait for it to return a result.
     final barcode = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
     );
 
-    // 2. Check if the user cancelled or returned no code.
     if (!mounted || barcode == null || barcode.isEmpty) {
       return;
     }
@@ -49,19 +47,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       _searchResults = [];
     });
 
-    // 3. Look up the product using the scanned barcode.
     try {
       final product = await _foodApiService.lookupProductByBarcode(barcode);
       if (product != null) {
         _showLogDialog(product);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Product not found for this barcode.'),
           backgroundColor: Colors.orange,
         ));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Error: ${e.toString()}'),
         backgroundColor: Colors.red,
       ));
@@ -128,7 +125,7 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   void _showLogDialog(FoodProduct product) {
     String selectedMealType = 'breakfast';
-    final servingController = TextEditingController(text: '100');
+    final servingController = TextEditingController(text: '100'); // Default serving size
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -137,13 +134,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Calories: ${product.calories.toStringAsFixed(1)} kcal / 100g'),
+                  Text('Calories: ${product.calories.toStringAsFixed(1)} kcal / 100g', style: const TextStyle(color: Colors.black87)), // Dark text
                   const SizedBox(height: 20),
                   DropdownButtonFormField<String>(
                     value: selectedMealType,
-                    decoration: const InputDecoration(labelText: 'Meal Type'),
+                    decoration: InputDecoration(
+                      labelText: 'Meal Type',
+                      labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
                     items: ['breakfast', 'lunch', 'dinner', 'snack']
-                        .map((label) => DropdownMenuItem(value: label, child: Text(label.toUpperCase())))
+                        .map((label) => DropdownMenuItem(value: label, child: Text(label.toUpperCase(), style: const TextStyle(color: Colors.black87)))) // Dark text for items
                         .toList(),
                     onChanged: (value) {
                       if (value != null) setDialogState(() => selectedMealType = value);
@@ -152,13 +154,18 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: servingController,
-                    decoration: const InputDecoration(labelText: 'Serving Size', suffixText: 'grams'),
+                    decoration: InputDecoration(
+                      labelText: 'Serving Size',
+                      suffixText: 'grams',
+                      labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
+                    ),
                     keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.black87), // Dark text for input
                   )
                 ],),
               actions: [
                 TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-                FilledButton(
+                ElevatedButton( // Changed to ElevatedButton for consistent styling
                   onPressed: () {
                     final servingSize = double.tryParse(servingController.text) ?? 100.0;
                     Navigator.of(context).pop();
@@ -173,61 +180,84 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // The build method remains the same as before
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        title: const Text('Find a Food'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        title: Text(
+          'Find a Food',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
+        ),
+        backgroundColor: Colors.transparent, // Make AppBar transparent
+        elevation: 0, // No shadow
+        foregroundColor: Colors.white, // Default icon/text color for app bar
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _scanBarcode,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan Barcode'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Row(children: [
-                    Expanded(child: Divider()),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text("OR")),
-                    Expanded(child: Divider()),
-                ]),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _searchController,
-                  onChanged: _onSearchChanged,
-                  decoration: InputDecoration(
-                    hintText: 'Search by name...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() { _searchResults = []; });
-                            },
-                          )
-                        : null,
-                  ),
-                ),
-              ],
-            ),
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          Expanded(child: _buildResultsList())
-        ],
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _scanBarcode,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scan Barcode'),
+                    style: ElevatedButton.styleFrom( // Override style for this specific button if needed
+                      minimumSize: const Size(double.infinity, 50),
+                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      backgroundColor: Theme.of(context).colorScheme.secondary, // Use secondary color (SkyBlue)
+                      foregroundColor: Theme.of(context).colorScheme.onSecondary, // White text
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(children: [
+                      Expanded(child: Divider(color: Colors.black45)), // Darker divider
+                      Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Text("OR", style: TextStyle(color: Colors.black54))), // Darker text
+                      Expanded(child: Divider(color: Colors.black45)), // Darker divider
+                  ]),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.black54), // Darker icon
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.black54), // Darker icon
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() { _searchResults = []; });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.9), // White fill for text field
+                      labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Darker label
+                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]), // Lighter hint
+                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Darker input text
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildResultsList())
+          ],
+        ),
       ),
     );
   }
-  
+
   Widget _buildResultsList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -236,21 +266,25 @@ class _AddFoodScreenState extends State<AddFoodScreen> {
       return Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)));
     }
     if (_searchResults.isEmpty && _searchController.text.isNotEmpty) {
-      return const Center(child: Text('No results found.'));
+      return const Center(child: Text('No results found.', style: TextStyle(color: Colors.black54))); // Darker text
     }
     if (_searchResults.isEmpty) {
-       return const Center(child: Text('Start typing to search for a food.'));
+       return const Center(child: Text('Start typing to search for a food.', style: TextStyle(color: Colors.black54))); // Darker text
     }
 
     return ListView.builder(
       itemCount: _searchResults.length,
       itemBuilder: (context, index) {
         final product = _searchResults[index];
-        return ListTile(
-          title: Text(product.productName),
-          subtitle: Text('${product.calories.toStringAsFixed(0)} kcal per 100g'),
-          trailing: const Icon(Icons.add_circle_outline),
-          onTap: () => _showLogDialog(product),
+        return Card( // Wrap ListTile in Card
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            title: Text(product.productName, style: const TextStyle(color: Colors.black87)), // Dark text
+            subtitle: Text('${product.calories.toStringAsFixed(0)} kcal per 100g', style: const TextStyle(color: Colors.grey)), // Dark text
+            trailing: const Icon(Icons.add_circle_outline, color: Colors.black54), // Darker icon
+            onTap: () => _showLogDialog(product),
+          ),
         );
       },
     );

@@ -41,7 +41,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
           .eq('user_id', userId)
           .gte('logged_date', formatter.format(thirtyDaysAgo))
           .order('logged_date', ascending: true);
-          
+
       _weightData = weightHistory.map((row) {
           final date = DateTime.parse(row['logged_date']);
           final day = date.difference(thirtyDaysAgo).inDays.toDouble();
@@ -74,81 +74,111 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        title: const Text('Your Progress'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        title: Text(
+          'Your Progress',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
+        ),
+        backgroundColor: Colors.transparent, // Make AppBar transparent
+        elevation: 0, // No shadow
+        foregroundColor: Colors.white, // Default icon/text color for app bar
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Colors.white, // White label for selected tab
+          unselectedLabelColor: Colors.white70, // Lighter white for unselected
+          indicatorColor: Colors.white, // White indicator
           tabs: const [
             Tab(text: 'Weight'),
             Tab(text: 'Calories'),
           ],
         ),
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator()) 
-        : TabBarView(
-            controller: _tabController,
-            children: [
-              _buildChartContainer('Weight (kg)', _weightData, Theme.of(context).colorScheme.primary),
-              _buildChartContainer('Calories (kcal)', _calorieData, Theme.of(context).colorScheme.secondary),
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
+        child: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildChartContainer('Weight (kg)', _weightData, Theme.of(context).colorScheme.primary),
+                _buildChartContainer('Calories (kcal)', _calorieData, Theme.of(context).colorScheme.secondary),
+              ],
+          ),
+      ),
     );
   }
 
   Widget _buildChartContainer(String title, List<FlSpot> data, Color lineColor) {
     if (data.isEmpty) {
-      return Center(child: Text('No data available for the last 30 days.', style: TextStyle(color: Colors.grey[600])));
+      return Center(child: Text('No data available for the last 30 days.', style: TextStyle(color: Colors.black54))); // Darker text for visibility
     }
-    
+
     return Padding(
       padding: const EdgeInsets.all(24.0),
-      child: Column(
-        children: [
-          Text(title, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 32),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 30,
-                    getTitlesWidget: (value, meta) {
-                        // Shows dates for start, middle, and end of the 30-day period
-                        if (value.toInt() == 0 || value.toInt() == 15 || value.toInt() == 30) {
-                            final date = DateTime.now().subtract(Duration(days: 30 - value.toInt()));
-                            return SideTitleWidget(axisSide: meta.axisSide, child: Text(DateFormat.MMMd().format(date)));
+      child: Card( // Wrap chart in a Card to match the theme
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Text(title, style: Theme.of(context).textTheme.headlineSmall), // Uses default black text for card
+              const SizedBox(height: 32),
+              Expanded(
+                child: LineChart(
+                  LineChartData(
+                    gridData: FlGridData(show: false),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      bottomTitles: AxisTitles(sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        getTitlesWidget: (value, meta) {
+                            // Shows dates for start, middle, and end of the 30-day period
+                            if (value.toInt() == 0 || value.toInt() == 15 || value.toInt() == 30) {
+                                final date = DateTime.now().subtract(Duration(days: 30 - value.toInt()));
+                                return SideTitleWidget(axisSide: meta.axisSide, child: Text(DateFormat.MMMd().format(date), style: const TextStyle(color: Colors.black87))); // Darker text for axis labels
+                            }
+                            return const Text('');
                         }
-                        return const Text('');
-                    }
-                  )),
+                      )),
+                      leftTitles: AxisTitles(sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          return SideTitleWidget(axisSide: meta.axisSide, child: Text(value.toInt().toString(), style: const TextStyle(color: Colors.black87))); // Darker text for axis labels
+                        },
+                      )),
+                    ),
+                    borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade400, width: 1)), // Lighter border color
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: data,
+                        isCurved: true,
+                        color: lineColor,
+                        barWidth: 5,
+                        isStrokeCapRound: true,
+                        dotData: const FlDotData(show: false),
+                        belowBarData: BarAreaData(show: true, color: lineColor.withOpacity(0.3)),
+                      )
+                    ],
+                  ),
                 ),
-                borderData: FlBorderData(show: true, border: Border.all(color: const Color(0xff37434d), width: 1)),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: data,
-                    isCurved: true,
-                    color: lineColor,
-                    barWidth: 5,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(show: true, color: lineColor.withOpacity(0.3)),
-                  )
-                ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

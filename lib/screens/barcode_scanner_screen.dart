@@ -8,30 +8,43 @@ class BarcodeScannerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        title: const Text('Scan Barcode'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-      ),
-      body: MobileScanner(
-        // The controller gives us control over the camera
-        controller: MobileScannerController(
-          detectionSpeed: DetectionSpeed.normal,
-          facing: CameraFacing.back,
-          torchEnabled: false, // You could add a button to toggle this
+        title: Text(
+          'Scan Barcode',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
         ),
-        // This function is called when a barcode is detected
-        onDetect: (capture) {
-          final List<Barcode> barcodes = capture.barcodes;
-          if (barcodes.isNotEmpty) {
-            final String? code = barcodes.first.rawValue;
-            if (code != null && code.isNotEmpty) {
-              // Once a code is found, pop this screen and return the code
-              // to the previous screen (the AddFoodScreen).
-              Navigator.of(context).pop(code);
+        backgroundColor: Colors.transparent, // Make AppBar transparent
+        foregroundColor: Colors.white, // Default icon/text color for app bar
+        elevation: 0, // No shadow
+      ),
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: MobileScanner(
+          controller: MobileScannerController(
+            detectionSpeed: DetectionSpeed.normal,
+            facing: CameraFacing.back,
+            torchEnabled: false,
+          ),
+          onDetect: (capture) {
+            final List<Barcode> barcodes = capture.barcodes;
+            if (barcodes.isNotEmpty) {
+              final String? code = barcodes.first.rawValue;
+              if (code != null && code.isNotEmpty) {
+                Navigator.of(context).pop(code);
+              }
             }
-          }
-        },
+          },
+        ),
       ),
     );
   }

@@ -70,32 +70,49 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make Scaffold transparent
       appBar: AppBar(
-        title: const Text('Log an Exercise'),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        title: Text(
+          'Log an Exercise',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white), // White text for app bar
+        ),
+        backgroundColor: Colors.transparent, // Make AppBar transparent
+        elevation: 0, // No shadow
+        foregroundColor: Colors.white, // Default icon/text color for app bar
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildTextFormField(controller: _nameController, label: 'Exercise Name (e.g., Running)', validator: _requiredValidator),
-              const SizedBox(height: 16),
-              _buildTextFormField(controller: _durationController, label: 'Duration (minutes)', keyboardType: TextInputType.number, validator: _requiredValidator),
-              const SizedBox(height: 16),
-              _buildTextFormField(controller: _caloriesController, label: 'Calories Burned', keyboardType: TextInputType.number, validator: _requiredValidator),
-              const SizedBox(height: 40),
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator())
-              else
-                ElevatedButton(
-                  onPressed: _logExercise,
-                  child: const Text('Log Exercise'),
-                ),
+      body: Container( // Wrap body in a Container for the gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE0E0FF), // Very light lavender
+              Color(0xFFCCEEFF), // Light sky blue
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTextFormField(controller: _nameController, label: 'Exercise Name (e.g., Running)', validator: _requiredValidator),
+                const SizedBox(height: 16),
+                _buildTextFormField(controller: _durationController, label: 'Duration (minutes)', keyboardType: TextInputType.number, validator: _requiredValidator),
+                const SizedBox(height: 16),
+                _buildTextFormField(controller: _caloriesController, label: 'Calories Burned', keyboardType: TextInputType.number, validator: _requiredValidator),
+                const SizedBox(height: 40),
+                if (_isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  ElevatedButton(
+                    onPressed: _logExercise,
+                    child: const Text('Log Exercise'),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -110,9 +127,16 @@ class _AddExerciseScreenState extends State<AddExerciseScreen> {
   }) {
     return TextFormField(
       controller: controller,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
+        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]), // Lighter hint text
+        filled: true, // Make sure it's filled to show background
+        fillColor: Colors.white.withOpacity(0.9), // White background for text fields
+      ),
       keyboardType: keyboardType,
       validator: validator,
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for input
     );
   }
 

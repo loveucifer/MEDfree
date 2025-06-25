@@ -4,7 +4,7 @@ import 'screens/home_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/friends_screen.dart'; // Import the new friends screen
+import 'screens/friends_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppShell extends StatefulWidget {
@@ -17,11 +17,10 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
-  // Add FriendsScreen to the list of pages
   static const List<Widget> _pages = <Widget>[
     HomeScreen(),
     ProgressScreen(),
-    FriendsScreen(), // New Screen
+    FriendsScreen(),
     ProfileScreen(),
   ];
 
@@ -31,23 +30,75 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  String _getPageTitle(int index) {
+    switch (index) {
+      case 0:
+        return 'Dashboard';
+      case 1:
+        return 'Progress';
+      case 2:
+        return 'Friends';
+      case 3:
+        return 'Profile';
+      default:
+        return 'MEDfree';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // The scaffold background should be transparent to let the body of the child screen show through
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true, // Crucial to allow body content to extend under the transparent AppBar
       appBar: AppBar(
-        title: Text(_getPageTitle(_selectedIndex)),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
+        title: ShaderMask( // Apply gradient to text
+          shaderCallback: (bounds) {
+            return const LinearGradient(
+              colors: [
+                Color(0xFFEDE7F6), // Top left (white-ish)
+                Color(0xFF673AB7), // Bottom right (deep purple)
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds);
+          },
+          child: Text(
+            _getPageTitle(_selectedIndex),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.white, // This color will be masked by the shader
+            ),
+          ),
+        ),
+        // Make the AppBar transparent to let the flexibleSpace gradient show through
+        backgroundColor: Colors.transparent,
+        elevation: 0, // No shadow
+        foregroundColor: Colors.white, // Default icon/text color for app bar
+        flexibleSpace: Container( // This container will provide the gradient background for the AppBar
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFFEDE7F6), // Top left (white-ish)
+                Color(0xFFD1C4E9), // Light purple
+                Color(0xFF9575CD), // Medium purple
+                Color(0xFF673AB7), // Bottom right (deep purple)
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined), // Inherits foregroundColor (white)
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
             },
             tooltip: 'Settings & Reminders',
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout), // Inherits foregroundColor (white)
             onPressed: () => Supabase.instance.client.auth.signOut(),
             tooltip: 'Sign Out'
           ),
@@ -58,7 +109,7 @@ class _AppShellState extends State<AppShell> {
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Use this to allow more than 3 items
+        type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
@@ -70,7 +121,7 @@ class _AppShellState extends State<AppShell> {
             activeIcon: Icon(Icons.timeline),
             label: 'Progress',
           ),
-          BottomNavigationBarItem( // New Item
+          BottomNavigationBarItem(
             icon: Icon(Icons.people_outline),
             activeIcon: Icon(Icons.people),
             label: 'Friends',
@@ -82,26 +133,11 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
+        selectedItemColor: Theme.of(context).colorScheme.primary, // MediumPurple
         unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
         showUnselectedLabels: true,
       ),
     );
-  }
-
-  String _getPageTitle(int index) {
-    switch (index) {
-      case 0:
-        return 'Dashboard';
-      case 1:
-        return 'Progress';
-      case 2:
-        return 'Friends'; // New Title
-      case 3:
-        return 'Profile';
-      default:
-        return 'MEDfree';
-    }
   }
 }
