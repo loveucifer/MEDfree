@@ -35,12 +35,14 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # --- THIS IS THE CRUCIAL FIX ---
-  # This section tells Flutter to include the .env file in the build.
   assets:
     - .env
-    # Add your new splash image here
-    - assets/splash_logo.png # <--- ADD THIS LINE assuming you put the image in assets/ and named it splash_logo.png
+    # Ensure these asset paths match the actual filenames in your assets/ directory
+    - assets/thrive_being.png # Added for the larger splash image
+    - assets/medfree.png # Added for the smaller splash image
+    # If you still have a generic splash_logo.png for native splash, keep it.
+    # Otherwise, you might want to remove it or update flutter_native_splash to use thrivebeing_white.png
+    - assets/splash_logo.png # Keeping this for flutter_native_splash config based on prior conversation
   # -----------------------------
 
 # It's good practice to add the configuration for these packages here
@@ -52,11 +54,11 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#FFFFFF" # A fallback color for the native splash. The Flutter splash screen will handle the gradient.
-  image: assets/splash_logo.png # <--- UPDATE THIS LINE to point to your new splash image
+  color: "#FFFFFF" # A fallback color for the native splash.
+  # Update this to use the image you prefer for the *native* splash
+  image: assets/thrive_being.png # Updated to use one of the new main splash images
   android: true
   ios: true
-  # Add this if you want to preserve the icon on the native splash until Flutter loads
   android_gravity: center
   ios_content_mode: center
   fullscreen: true

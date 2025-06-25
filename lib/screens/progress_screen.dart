@@ -75,6 +75,7 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent, // Make Scaffold transparent
+      extendBodyBehindAppBar: true, // Allow body to extend behind app bar
       appBar: AppBar(
         title: Text(
           'Your Progress',
@@ -95,6 +96,8 @@ class _ProgressScreenState extends State<ProgressScreen> with SingleTickerProvid
         ),
       ),
       body: Container( // Wrap body in a Container for the gradient background
+        width: double.infinity, // Ensure it fills width
+        height: double.infinity, // Ensure it fills height
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [

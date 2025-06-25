@@ -10,29 +10,23 @@ import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
-  // Wrap the entire initialization process in a try-catch block.
   try {
     WidgetsFlutterBinding.ensureInitialized();
-
-    // These are the most likely points of failure.
+    
     await dotenv.load(fileName: ".env");
     await NotificationService().init();
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
-
-    // If everything succeeds, run the normal app.
+    
     runApp(const MEDfreeApp());
 
   } catch (error) {
-    // If any error occurs during initialization, run a special ErrorApp
-    // that will display the error message. This prevents getting stuck.
     runApp(ErrorApp(error: error.toString()));
   }
 }
 
-// A simple widget to display startup errors.
 class ErrorApp extends StatelessWidget {
   final String error;
   const ErrorApp({super.key, required this.error});
@@ -68,42 +62,43 @@ class ErrorApp extends StatelessWidget {
   }
 }
 
-// The rest of your app code remains the same.
 final supabase = Supabase.instance.client;
 
 class MEDfreeApp extends StatelessWidget {
   const MEDfreeApp({super.key});
+
+  // Define your new primary and secondary colors
+  static const Color primaryColor = Color(0xFFB085EF); // Lighter Purple: #B085EF
+  static const Color secondaryColor = Color(0xFF00B0F0); // Bright Blue: #00B0F0
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MEDfree',
       theme: ThemeData(
-        // Use a less intense primarySwatch to align with the lighter gradient
-        primarySwatch: _createMaterialColor(const Color(0xFF9370DB)), // MediumPurple
+        // Use your new colors
+        primarySwatch: _createMaterialColor(primaryColor),
         scaffoldBackgroundColor: Colors.transparent, // Allow body to provide gradient
         colorScheme: ColorScheme.fromSwatch(
-          primarySwatch: _createMaterialColor(const Color(0xFF9370DB)), // MediumPurple
-          accentColor: const Color(0xFF87CEEB), // SkyBlue for secondary accent
+          primarySwatch: _createMaterialColor(primaryColor),
+          accentColor: secondaryColor,
         ).copyWith(
-          // Refined colors based on the desired white-purple gradient and button colors
-          primary: const Color(0xFF9370DB), // MediumPurple for primary elements
-          onPrimary: Colors.white,
-          secondary: const Color(0xFF87CEEB), // SkyBlue for secondary elements
-          onSecondary: Colors.white,
-          surface: Colors.white, // Card background (slightly opaque in cards directly)
-          onSurface: Colors.black87,
+          primary: primaryColor,
+          onPrimary: Colors.white, // Text/icon color on primary background
+          secondary: secondaryColor,
+          onSecondary: Colors.white, // Text/icon color on secondary background
+          surface: Colors.white, // Card background (will be slightly opaque in cards)
+          onSurface: Colors.black87, // Text/icon color on card/surface
           background: Colors.transparent, // Allow body to provide background
           onBackground: Colors.black87,
           error: Colors.redAccent,
           onError: Colors.white,
         ),
         textTheme: const TextTheme(
-          headlineMedium: TextStyle(fontWeight: FontWeight.bold, fontSize: 28.0, color: Colors.black87), // Darker text for dashboards
-          headlineSmall: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.0, color: Colors.black87), // Darker text
+          headlineMedium: TextStyle(fontWeight: FontWeight.bold, fontSize: 28.0, color: Colors.black87),
+          headlineSmall: TextStyle(fontWeight: FontWeight.bold, fontSize: 24.0, color: Colors.black87),
           bodyLarge: TextStyle(fontSize: 16.0, color: Colors.black87),
           bodyMedium: TextStyle(fontSize: 14.0, color: Colors.black87),
-          // Default text for gradient screens will be overridden locally
         ),
         cardTheme: CardThemeData(
           elevation: 4,
@@ -114,10 +109,10 @@ class MEDfreeApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF9370DB), // Main button color (MediumPurple)
+            backgroundColor: primaryColor, // Use new primary color
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0), // Rounded buttons
+              borderRadius: BorderRadius.circular(12.0),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -125,8 +120,8 @@ class MEDfreeApp extends StatelessWidget {
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF87CEEB), // Text color for outlined button (SkyBlue)
-            side: const BorderSide(color: Color(0xFF87CEEB), width: 1.5), // Border color (SkyBlue)
+            foregroundColor: secondaryColor, // Use new secondary color
+            side: BorderSide(color: secondaryColor, width: 1.5), // Use new secondary color for border
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12.0),
             ),
@@ -136,7 +131,7 @@ class MEDfreeApp extends StatelessWidget {
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF9370DB), // Text color for text buttons (MediumPurple)
+            foregroundColor: primaryColor, // Use new primary color
             textStyle: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
@@ -152,7 +147,7 @@ class MEDfreeApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(color: Color(0xFF9370DB), width: 2.0), // Primary focus (MediumPurple)
+            borderSide: BorderSide(color: primaryColor, width: 2.0), // Use new primary color for focus
           ),
           labelStyle: TextStyle(color: Colors.grey.shade600),
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -163,7 +158,6 @@ class MEDfreeApp extends StatelessWidget {
     );
   }
 
-  // Helper function to create a MaterialColor from a single Color
   MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = {};
@@ -207,7 +201,7 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: supabase.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) { // FIX: Changed 'Connection.waiting' to 'ConnectionState.waiting'
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
         if (snapshot.hasError) {
@@ -218,19 +212,20 @@ class AuthGate extends StatelessWidget {
           return FutureBuilder<Map<String, dynamic>?>(
             future: _getProfile(session.user.id),
             builder: (context, profileSnapshot) {
-              if (profileSnapshot.connectionState == ConnectionState.waiting) { // FIX: Changed 'Connection.waiting' to 'ConnectionState.waiting'
+              if (profileSnapshot.connectionState == ConnectionState.waiting) {
                 return const SplashScreen();
               }
               if (profileSnapshot.hasError) {
+                // Ensure the error screen uses the new colors
                 return Scaffold(
                   body: Container(
+                    width: double.infinity,
+                    height: double.infinity,
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Color(0xFFEDE7F6), // Top left
-                          Color(0xFFD1C4E9),
-                          Color(0xFF9575CD),
-                          Color(0xFF673AB7), // Bottom right
+                          MEDfreeApp.primaryColor, // Use new primary color
+                          MEDfreeApp.secondaryColor, // Use new secondary color
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -244,18 +239,22 @@ class AuthGate extends StatelessWidget {
                           children: [
                             Text(
                               "Error Loading Profile",
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.black87), // Ensure text color is visible
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white), // White text
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               profileSnapshot.error.toString(),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.black54), // Ensure text color is visible
+                              style: const TextStyle(color: Colors.white70), // Lighter white text
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: () => supabase.auth.signOut(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white, // White button
+                                foregroundColor: MEDfreeApp.primaryColor, // Text color is primary
+                              ),
                               child: const Text("Sign Out & Try Again"),
                             )
                           ],

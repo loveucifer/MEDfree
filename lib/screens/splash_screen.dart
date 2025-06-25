@@ -1,26 +1,44 @@
 // lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
+import '../main.dart'; // Import to access MEDfreeApp's defined colors
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget { // Changed to StatefulWidget
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // The timer here is for internal operations of SplashScreen,
+    // the actual display duration is controlled by AuthGate.
+    _startSplashTimer();
+  }
+
+  void _startSplashTimer() async {
+    // This delay ensures any internal splash screen animations/operations
+    // have time to complete. The overall screen display time is handled
+    // by AuthGate to guarantee a minimum duration.
+    await Future.delayed(const Duration(seconds: 10)); // Increased to 5 seconds
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Ensure the Scaffold itself is transparent to allow the body's gradient to show
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.transparent, // Ensure Scaffold is transparent
       body: Container(
-        // Apply the gradient background here
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            // Define your desired gradient colors (white to purple)
-            // Adjust these colors based on the exact shades you want from your image
+            // Use the new colors for the splash screen gradient
             colors: [
-              Color(0xFFEDE7F6), // A very light purple/off-white for the top left
-              Color(0xFFD1C4E9), // A slightly darker purple
-              Color(0xFF9575CD), // A medium purple
-              Color(0xFF673AB7), // A deeper purple for the bottom right
+              MEDfreeApp.primaryColor, // Top-left lighter purple: #B085EF
+              MEDfreeApp.secondaryColor, // Bottom-right bright blue: #00B0F0
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -30,15 +48,20 @@ class SplashScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Your splash logo (e.g., "thrive being" with MEDfree)
+              // Larger "thrive being" image (corrected asset name)
               Image.asset(
-                'assets/splash_logo.png', // Ensure this path is correct in pubspec.yaml
+                'assets/thrive_being.png', // Corrected asset name
                 width: 250, // Adjust size as needed
-                height: 250, // Adjust size as needed
+                height: 250,
               ),
-              const SizedBox(height: 20),
-              // You can add a loading indicator or text if desired,
-              // ensuring its color contrasts with the gradient.
+              const SizedBox(height: 20), // Spacing between the two images/text
+              // Smaller "MEDfree" image/text (corrected asset name)
+              Image.asset(
+                'assets/medfree.png', // Corrected asset name
+                width: 150, // Adjust size as needed, smaller than the first
+                height: 50,
+              ),
+              const SizedBox(height: 40), // Spacing before the loading indicator
               CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary), // White
               ),

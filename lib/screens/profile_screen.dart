@@ -107,6 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent, // Make Scaffold transparent
+      extendBodyBehindAppBar: true, // Allow body to extend behind app bar
       appBar: AppBar(
         title: Text(
           'Edit Profile',
@@ -117,6 +118,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         foregroundColor: Colors.white, // Default icon/text color for app bar
       ),
       body: Container( // Wrap body in a Container for the gradient background
+        width: double.infinity, // Ensure it fills width
+        height: double.infinity, // Ensure it fills height
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -170,6 +173,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Ensure label and hint text are visible on the background, if not white already
         labelStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.black87), // Dark text for labels
         hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[400]), // Lighter hint text
+        filled: true, // Make sure it's filled to show background
+        fillColor: Colors.white.withOpacity(0.9), // White background for text fields
       ),
       keyboardType: keyboardType,
       validator: validator,
