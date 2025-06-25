@@ -111,15 +111,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The background is transparent to let the AppShell's gradient show.
       backgroundColor: Colors.transparent,
-      // The AppBar is now provided by the AppShell.
       appBar: AppBar(
         title: const Text('Notifications & Reminders'),
-        backgroundColor: MEDfreeApp.primaryColor, // Matching AppBar color
+        backgroundColor: Colors.transparent,
         elevation: 0,
       ),
+      extendBodyBehindAppBar: true, 
       body: Container(
+        height: double.infinity,
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -130,50 +131,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
             end: Alignment.bottomRight,
           ),
         ),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            _buildReminderTile(
-              title: 'Breakfast Reminder',
-              value: _breakfastReminder,
-              time: _breakfastTime,
-              onChanged: (enabled) {
-                _updateReminder(enabled: enabled, time: _breakfastTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
-              },
-              onTimeTap: () {
-                _selectTime(context, _breakfastTime, (newTime) {
-                  // If the reminder is already on, update it immediately. Otherwise, just update the time state.
-                  _updateReminder(enabled: _breakfastReminder, time: newTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
-                });
-              }
-            ),
-            _buildReminderTile(
-              title: 'Lunch Reminder',
-              value: _lunchReminder,
-              time: _lunchTime,
-              onChanged: (enabled) {
-                _updateReminder(enabled: enabled, time: _lunchTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
-              },
-              onTimeTap: () {
-                _selectTime(context, _lunchTime, (newTime) {
-                   _updateReminder(enabled: _lunchReminder, time: newTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
-                });
-              }
-            ),
-             _buildReminderTile(
-              title: 'Dinner Reminder',
-              value: _dinnerReminder,
-              time: _dinnerTime,
-              onChanged: (enabled) {
-                _updateReminder(enabled: enabled, time: _dinnerTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
-              },
-              onTimeTap: () {
-                _selectTime(context, _dinnerTime, (newTime) {
-                   _updateReminder(enabled: _dinnerReminder, time: newTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
-                });
-              }
-            ),
-          ],
+        child: SafeArea( 
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              _buildReminderTile(
+                title: 'Breakfast Reminder',
+                value: _breakfastReminder,
+                time: _breakfastTime,
+                onChanged: (enabled) {
+                  _updateReminder(enabled: enabled, time: _breakfastTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
+                },
+                onTimeTap: () {
+                  _selectTime(context, _breakfastTime, (newTime) {
+                    _updateReminder(enabled: _breakfastReminder, time: newTime, keyPrefix: 'breakfast', notificationId: 0, mealName: 'Breakfast');
+                  });
+                }
+              ),
+              const SizedBox(height: 12),
+              _buildReminderTile(
+                title: 'Lunch Reminder',
+                value: _lunchReminder,
+                time: _lunchTime,
+                onChanged: (enabled) {
+                  _updateReminder(enabled: enabled, time: _lunchTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
+                },
+                onTimeTap: () {
+                  _selectTime(context, _lunchTime, (newTime) {
+                     _updateReminder(enabled: _lunchReminder, time: newTime, keyPrefix: 'lunch', notificationId: 1, mealName: 'Lunch');
+                  });
+                }
+              ),
+              const SizedBox(height: 12),
+               _buildReminderTile(
+                title: 'Dinner Reminder',
+                value: _dinnerReminder,
+                time: _dinnerTime,
+                onChanged: (enabled) {
+                  _updateReminder(enabled: enabled, time: _dinnerTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
+                },
+                onTimeTap: () {
+                  _selectTime(context, _dinnerTime, (newTime) {
+                     _updateReminder(enabled: _dinnerReminder, time: newTime, keyPrefix: 'dinner', notificationId: 2, mealName: 'Dinner');
+                  });
+                }
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -188,21 +192,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTimeTap
   }) {
     return Card(
-      // The Card theme from main.dart provides the styling.
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
         subtitle: GestureDetector(
             onTap: onTimeTap,
             child: Text(
               'Remind me at: ${time.format(context)}',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary.withOpacity(0.9)),
             ),
           ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
           activeColor: Theme.of(context).colorScheme.primary,
+          // FIX: Add a visible color for the inactive track of the switch.
+          inactiveTrackColor: Colors.grey.shade300,
         ),
       ),
     );

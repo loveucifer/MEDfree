@@ -1,283 +1,300 @@
-// lib/screens/onboarding_screen.dart
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart'; // <-- ADDED THIS IMPORT
-import '../main.dart'; // We need this to access AuthGate and theme colors
+import 'package:shimmer/shimmer.dart';
+import '../widgets/skeleton_loader.dart';
+import 'add_food_screen.dart';
+import 'add_exercise_screen.dart';
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
-
-  @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+// Data models for entries, moved for clarity
+class FoodEntry {
+  final String name;
+  final double calories;
+  final String mealType;
+  FoodEntry({required this.name, required this.calories, required this.mealType});
+  factory FoodEntry.fromMap(Map<String, dynamic> map) => FoodEntry(
+        name: map['food_name'] as String,
+        calories: (map['calories'] as num).toDouble(),
+        mealType: map['meal_type'] as String,
+      );
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _pageController = PageController();
-  final _nameController = TextEditingController();
-  DateTime? _selectedDate;
-  String? _selectedGender;
-  final _heightController = TextEditingController();
-  final _currentWeightController = TextEditingController();
-  final _goalWeightController = TextEditingController();
-  String? _selectedActivityLevel;
-  bool _isLoading = false;
+class ExerciseEntry {
+  final String name;
+  final double caloriesBurned;
+  ExerciseEntry({required this.name, required this.caloriesBurned});
+  factory ExerciseEntry.fromMap(Map<String, dynamic> map) => ExerciseEntry(
+      name: map['exercise_name'] as String,
+      caloriesBurned: (map['calories_burned'] as num).toDouble(),
+  );
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  Map<String, dynamic>? _profile;
+  List<FoodEntry> _foodEntries = [];
+  List<ExerciseEntry> _exerciseEntries = [];
+  double _totalCaloriesToday = 0;
+  double _totalCaloriesBurnedToday = 0;
+  int _totalWaterToday = 0;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   final supabase = Supabase.instance.client;
+  final double _waterGoal = 3000; // Example goal
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    _nameController.dispose();
-    _heightController.dispose();
-    _currentWeightController.dispose();
-    _goalWeightController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _fetchDashboardData();
   }
 
-  /// Shows the date picker dialog, styled to match the app's theme.
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        // Theming the date picker to match the app's color scheme.
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: MEDfreeApp.primaryColor,
-                  onPrimary: Colors.white,
-                  surface: Colors.white,
-                  onSurface: Colors.black87,
-                ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: MEDfreeApp.primaryColor,
-              ),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
-  /// Navigates to the next page in the onboarding sequence.
-  void _nextPage() {
-    _pageController.nextPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  /// Submits the completed profile to the database.
-  Future<void> _submitProfile() async {
-    // Validate all required fields before submission.
-    if (_nameController.text.trim().isEmpty ||
-        _selectedDate == null ||
-        _selectedGender == null ||
-        _heightController.text.trim().isEmpty ||
-        _currentWeightController.text.trim().isEmpty ||
-        _goalWeightController.text.trim().isEmpty ||
-        _selectedActivityLevel == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all fields.'), backgroundColor: Colors.redAccent),
-      );
-      return;
-    }
-
-    setState(() { _isLoading = true; });
+  /// Fetches all necessary data for the dashboard from Supabase.
+  Future<void> _fetchDashboardData() async {
+    if (!mounted) return;
+    setState(() { _isLoading = true; _errorMessage = null; });
 
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) throw "Not authenticated!";
+      final userId = supabase.auth.currentUser!.id;
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      final profileData = {
-        'id': user.id,
-        'full_name': _nameController.text.trim(),
-        'date_of_birth': _selectedDate!.toIso8601String(),
-        'gender': _selectedGender,
-        'height_cm': int.parse(_heightController.text.trim()),
-        'initial_weight_kg': double.parse(_currentWeightController.text.trim()),
-        'current_weight_kg': double.parse(_currentWeightController.text.trim()),
-        'goal_weight_kg': double.parse(_goalWeightController.text.trim()),
-        'activity_level': _selectedActivityLevel,
-        // TODO: Calculate this based on user data instead of a default.
-        'daily_calorie_goal': 2000,
-      };
+      final responses = await Future.wait<dynamic>([
+        supabase.from('profiles').select().eq('id', userId).single(),
+        supabase.from('food_diary').select().eq('user_id', userId).eq('logged_date', today),
+        supabase.from('water_log').select('quantity_ml').eq('user_id', userId).eq('logged_date', today),
+        supabase.from('exercise_log').select().eq('user_id', userId).eq('logged_date', today),
+      ]);
 
-      await supabase.from('profiles').update(profileData).eq('id', user.id);
+      // Process profile data
+      _profile = responses[0] as Map<String, dynamic>;
 
-      if (mounted) {
-        // Navigate to the main app, replacing the onboarding stack.
-         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const AuthGate()),
-          (route) => false,
-        );
-      }
+      // Process food data
+      final foodResponse = responses[1] as List<dynamic>;
+      _foodEntries = foodResponse.map((item) => FoodEntry.fromMap(item)).toList();
+      _totalCaloriesToday = _foodEntries.fold(0, (sum, item) => sum + item.calories);
+
+      // Process water data
+      final waterResponse = responses[2] as List<dynamic>;
+      _totalWaterToday = waterResponse.fold(0, (sum, item) => sum + (item['quantity_ml'] as int));
+
+      // Process exercise data
+      final exerciseResponse = responses[3] as List<dynamic>;
+      _exerciseEntries = exerciseResponse.map((item) => ExerciseEntry.fromMap(item)).toList();
+      _totalCaloriesBurnedToday = _exerciseEntries.fold(0, (sum, item) => sum + item.caloriesBurned);
+
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save profile: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
+      if (mounted) _errorMessage = "Failed to load dashboard data.";
     } finally {
-       if (mounted) {
-         setState(() { _isLoading = false; });
-       }
+      if (mounted) setState(() { _isLoading = false; });
+    }
+  }
+
+  /// Logs a water entry to the database.
+  Future<void> _logWater(int quantity) async {
+    try {
+      await supabase.from('water_log').insert({'user_id': supabase.auth.currentUser!.id, 'quantity_ml': quantity});
+      _fetchDashboardData(); // Refresh data after logging.
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to log water: $e'), backgroundColor: Colors.red));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      // AppBar is transparent with a white back arrow.
-      appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: _pageController.hasClients && _pageController.page?.round() != 0
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
-              )
-            : null,
-      ),
-      body: Container(
-        // Apply the standard app gradient.
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              MEDfreeApp.primaryColor,
-              MEDfreeApp.secondaryColor,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        body: SafeArea(
+          child: _isLoading
+              ? _buildDashboardShimmer()
+              : _errorMessage != null
+                  ? Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.white, fontSize: 16)))
+                  : RefreshIndicator(
+                      onRefresh: _fetchDashboardData,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 80),
+                        children: [
+                          Text('Welcome back, ${_profile?['full_name']?.split(' ')[0] ?? 'User'}!',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                          const SizedBox(height: 24),
+                          _buildCalorieSummaryCard(Theme.of(context)),
+                          const SizedBox(height: 24),
+                          _buildWaterSummaryCard(Theme.of(context)),
+                          const SizedBox(height: 24),
+                          _buildTodaysMealsCard(Theme.of(context)),
+                          const SizedBox(height: 24),
+                          _buildTodaysExercisesCard(Theme.of(context)),
+                        ],
+                      ),
+                    ),
         ),
-        child: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildTextPage("What's your full name?", _nameController, "e.g. Thrive Being"),
-            _buildDatePage("What's your date of birth?", _selectDate),
-            _buildChoicePage<String>("Select your gender", _selectedGender, ['male', 'female', 'other'], (value) => setState(() => _selectedGender = value)),
-            _buildTextPage("What's your height in cm?", _heightController, "e.g. 175", keyboardType: TextInputType.number),
-            _buildTextPage("What's your current weight in kg?", _currentWeightController, "e.g. 70.5", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-            _buildTextPage("What's your goal weight in kg?", _goalWeightController, "e.g. 65", keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-            _buildChoicePage<String>("Describe your activity level", _selectedActivityLevel, ['sedentary', 'light', 'moderate', 'active'], (value) => setState(() => _selectedActivityLevel = value), isFinalPage: true),
-          ],
-        ),
-      ),
+        floatingActionButton: _buildActionButtons(),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
-  /// A generic builder for a page in the PageView.
-  Widget _buildPage({required String title, required Widget child, bool isFinalPage = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white), textAlign: TextAlign.center),
-          const SizedBox(height: 40),
-          child,
-          const Spacer(),
-          _isLoading
-            ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-            : ElevatedButton(
-                onPressed: isFinalPage ? _submitProfile : _nextPage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: MEDfreeApp.primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: Text(isFinalPage ? 'Finish Setup' : 'Continue'),
-              ),
-          const SizedBox(height: 60), // Bottom padding
+  Widget _buildDashboardShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.white.withOpacity(0.1),
+      highlightColor: Colors.white.withOpacity(0.3),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 80),
+        children: const [
+          Skeleton(width: 250, height: 32, radius: 8),
+          SizedBox(height: 24),
+          Skeleton(height: 220, radius: 20),
+          SizedBox(height: 24),
+          Skeleton(height: 130, radius: 20),
+          SizedBox(height: 24),
+          Skeleton(height: 200, radius: 20),
         ],
       ),
     );
   }
 
-  /// Builds a page with a single text input field.
-  Widget _buildTextPage(String title, TextEditingController controller, String hint, {TextInputType? keyboardType}) {
-    return _buildPage(
-        title: title,
-        child: TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white54),
-            enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.white, width: 2)),
-          ),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24, color: Colors.white),
-        ));
-  }
-
-  /// Builds the date selection page.
-  Widget _buildDatePage(String title, Function(BuildContext) pickDate) {
-    return _buildPage(
-        title: title,
-        child: GestureDetector(
-          onTap: () => pickDate(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.white70)),
-            ),
-            child: Text(
-              _selectedDate == null ? 'Select Date' : DateFormat('MMMM d, yyyy').format(_selectedDate!),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, color: Colors.white),
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Expanded(
+            child: FloatingActionButton.extended(
+              heroTag: 'log_exercise_fab',
+              onPressed: () async {
+                final result = await Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => const AddExerciseScreen()));
+                if (result == true) _fetchDashboardData();
+              },
+              icon: const Icon(Icons.fitness_center),
+              label: const Text('Log Exercise'),
             ),
           ),
-        ));
-  }
-
-  /// Builds a page with a list of choices.
-  Widget _buildChoicePage<T>(String title, T? groupValue, List<T> items, ValueChanged<T?> onChanged, {bool isFinalPage = false}) {
-    return _buildPage(
-      title: title,
-      isFinalPage: isFinalPage,
-      child: Column(
-        children: items.map((item) {
-          final isSelected = groupValue == item;
-          return Card(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.25),
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: InkWell(
-              onTap: () => onChanged(item),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Center(
-                  child: Text(
-                    item.toString().toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? MEDfreeApp.primaryColor : Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: FloatingActionButton.extended(
+              heroTag: 'log_meal_fab',
+              onPressed: () async {
+                final result = await Navigator.push<bool>(context, MaterialPageRoute(builder: (context) => const AddFoodScreen()));
+                if (result == true) _fetchDashboardData();
+              },
+              icon: const Icon(Icons.fastfood),
+              label: const Text('Log Meal'),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildCalorieSummaryCard(ThemeData theme) {
+    final calorieGoal = (_profile?['daily_calorie_goal'] as num?)?.toDouble() ?? 2000.0;
+    final netCalories = _totalCaloriesToday - _totalCaloriesBurnedToday;
+    final remaining = calorieGoal - netCalories;
+
+    return Card(
+      // PASTEL COLOR ADDED
+      color: const Color(0xFFE6E0F8), // Light pastel purple
+      child: Padding(padding: const EdgeInsets.all(20.0), child: Column(children: [
+            Text('Net Calories', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            SizedBox(width: 150, height: 150, child: Stack(fit: StackFit.expand, children: [
+                  CircularProgressIndicator(
+                    value: (netCalories / calorieGoal).clamp(0.0, 1.0),
+                    strokeWidth: 12,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary)
+                  ),
+                  Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Text(remaining.toStringAsFixed(0), style: theme.textTheme.headlineMedium),
+                        Text('Remaining', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
+                      ],),),
+                ],),),
+            const SizedBox(height: 24),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                _buildStatColumn('Goal', calorieGoal.toStringAsFixed(0), theme),
+                _buildStatColumn('Food', _totalCaloriesToday.toStringAsFixed(0), theme),
+                _buildStatColumn('Burned', _totalCaloriesBurnedToday.toStringAsFixed(0), theme, color: theme.colorScheme.secondary),
+              ],)
+          ],),),);
+  }
+
+  Widget _buildWaterSummaryCard(ThemeData theme) {
+    return Card(
+      // PASTEL COLOR ADDED
+      color: const Color(0xFFE0F7FA), // Light pastel blue/cyan
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(children: [
+             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, crossAxisAlignment: CrossAxisAlignment.center, children: [
+                 Text('Water', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                 OutlinedButton.icon(
+                    onPressed: () => _logWater(250),
+                    icon: Icon(Icons.add, color: theme.colorScheme.primary),
+                    label: Text("Log", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))
+                 )
+               ],),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: (_totalWaterToday / _waterGoal).clamp(0.0, 1.0),
+              minHeight: 12,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.secondary),
+              borderRadius: BorderRadius.circular(6)
+            ),
+            const SizedBox(height: 16),
+             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('${_totalWaterToday.toStringAsFixed(0)} ml', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text('${_waterGoal.toStringAsFixed(0)} ml Goal', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
+              ],)
+          ],),),);
+  }
+
+  Widget _buildTodaysMealsCard(ThemeData theme) {
+    return Card(
+      // PASTEL COLOR ADDED
+      color: Colors.white, // Keeping this white as per the general design
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Today\'s Meals', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 10),
+            _foodEntries.isEmpty
+              ? const Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: Center(child: Text('No meals logged yet.', style: TextStyle(color: Colors.grey, fontSize: 16))))
+              : Column(children: _foodEntries.map((entry) => ListTile(
+                    title: Text(entry.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(entry.mealType.toUpperCase()),
+                    trailing: Text('${entry.calories.toStringAsFixed(0)} kcal', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                    dense: true)).toList()),
+          ],),),);
+  }
+
+  Widget _buildTodaysExercisesCard(ThemeData theme) {
+    return Card(
+      // PASTEL COLOR ADDED
+      color: Colors.white, // Keeping this white as per the general design
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Today\'s Exercises', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 10),
+            _exerciseEntries.isEmpty
+              ? const Padding(padding: EdgeInsets.symmetric(vertical: 20.0), child: Center(child: Text('No exercises logged yet.', style: TextStyle(color: Colors.grey, fontSize: 16))))
+              : Column(children: _exerciseEntries.map((entry) => ListTile(
+                    title: Text(entry.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: Text('${entry.caloriesBurned.toStringAsFixed(0)} kcal burned', style: TextStyle(color: theme.colorScheme.secondary, fontWeight: FontWeight.bold)),
+                    dense: true)).toList()),
+          ],),),);
+  }
+
+  Widget _buildStatColumn(String label, String value, ThemeData theme, {Color? color}) {
+    return Column(children: [
+        Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontSize: 22, color: color ?? Colors.black87, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(label, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.grey[600])),
+      ],);
   }
 }

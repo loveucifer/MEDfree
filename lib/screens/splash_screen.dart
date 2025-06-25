@@ -39,13 +39,13 @@ class SplashScreen extends StatelessWidget {
               // Display the "MEDfree" wordmark from assets.
               Image.asset(
                 'assets/medfree.png',
-                width: 150,
-                height: 50,
+                // Increased size for better visibility
+                width: 200,
               ),
               const SizedBox(height: 40),
               // Show a loading indicator to signify that the app is loading data.
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary), // White
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
               const SizedBox(height: 20),
               // Loading text to inform the user of the app's status.

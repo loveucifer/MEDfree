@@ -13,11 +13,8 @@ Future<void> main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Load environment variables
     await dotenv.load(fileName: ".env");
-    // Initialize notification services
     await NotificationService().init();
-    // Initialize Supabase
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -26,12 +23,10 @@ Future<void> main() async {
     runApp(const MEDfreeApp());
 
   } catch (error) {
-    // Run a fallback app if initialization fails
     runApp(ErrorApp(error: error.toString()));
   }
 }
 
-/// A fallback widget to display when critical initialization fails.
 class ErrorApp extends StatelessWidget {
   final String error;
   const ErrorApp({super.key, required this.error});
@@ -69,22 +64,19 @@ class ErrorApp extends StatelessWidget {
 
 final supabase = Supabase.instance.client;
 
-/// The root widget of the MEDfree application.
 class MEDfreeApp extends StatelessWidget {
   const MEDfreeApp({super.key});
 
-  // Define the application's primary and secondary colors based on the design.
-  static const Color primaryColor = Color(0xFFB085EF);   // Light Purple from image
-  static const Color secondaryColor = Color(0xFF00B0F0); // Bright Blue from image
+  static const Color primaryColor = Color(0xFFB085EF);
+  static const Color secondaryColor = Color(0xFF00B0F0);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MEDfree',
       theme: ThemeData(
-        // Use the defined colors to create the theme.
         primarySwatch: _createMaterialColor(primaryColor),
-        scaffoldBackgroundColor: Colors.transparent, // Required for gradient backgrounds.
+        scaffoldBackgroundColor: Colors.transparent,
         colorScheme: ColorScheme.fromSwatch(
           primarySwatch: _createMaterialColor(primaryColor),
           accentColor: secondaryColor,
@@ -147,7 +139,6 @@ class MEDfreeApp extends StatelessWidget {
     );
   }
 
-  /// Helper function to generate a MaterialColor swatch from a single Color.
   MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = {};
@@ -169,9 +160,22 @@ class MEDfreeApp extends StatelessWidget {
   }
 }
 
-/// Handles the authentication state and routes the user accordingly.
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  late Future<void> _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // This future ensures the splash screen is shown for at least 4 seconds.
+    _initFuture = Future.delayed(const Duration(seconds: 4));
+  }
 
   Future<Map<String, dynamic>?> _getProfile(String userId) async {
     try {
@@ -183,94 +187,94 @@ class AuthGate extends StatelessWidget {
           .timeout(const Duration(seconds: 15));
       return response;
     } catch (e) {
-      // Throw a more user-friendly error message.
       throw Exception('Could not fetch user profile. Please check your network and try again.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<AuthState>(
-      stream: supabase.auth.onAuthStateChange,
+    return FutureBuilder(
+      future: _initFuture,
       builder: (context, snapshot) {
-        // Show splash screen while waiting for auth state.
+        // While the 4-second delay is active, show the splash screen.
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
 
-        final session = snapshot.data?.session;
+        // After the delay, check the auth state.
+        return StreamBuilder<AuthState>(
+          stream: supabase.auth.onAuthStateChange,
+          builder: (context, authSnapshot) {
+            // While waiting for the first auth state, continue showing splash.
+            if (authSnapshot.connectionState == ConnectionState.waiting) {
+              return const SplashScreen();
+            }
 
-        // If user is logged in, check for their profile.
-        if (session != null) {
-          return FutureBuilder<Map<String, dynamic>?>(
-            future: _getProfile(session.user.id),
-            builder: (context, profileSnapshot) {
-              // Show splash screen while profile is loading.
-              if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                return const SplashScreen();
-              }
-              
-              // --- UPDATED ERROR HANDLING UI ---
-              // If there's an error loading the profile, show a themed error screen.
-              if (profileSnapshot.hasError) {
-                return Scaffold(
-                  body: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [MEDfreeApp.primaryColor, MEDfreeApp.secondaryColor],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              "Error Loading Profile",
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                              textAlign: TextAlign.center,
+            final session = authSnapshot.data?.session;
+
+            if (session != null) {
+              return FutureBuilder<Map<String, dynamic>?>(
+                future: _getProfile(session.user.id),
+                builder: (context, profileSnapshot) {
+                  if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                    return const SplashScreen();
+                  }
+
+                  if (profileSnapshot.hasError) {
+                    return Scaffold(
+                      body: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [MEDfreeApp.primaryColor, MEDfreeApp.secondaryColor],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Error Loading Profile",
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  profileSnapshot.error.toString(),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton(
+                                  onPressed: () => supabase.auth.signOut(),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: MEDfreeApp.primaryColor,
+                                  ),
+                                  child: const Text("Sign Out & Try Again"),
+                                )
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              profileSnapshot.error.toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70),
-                            ),
-                            const SizedBox(height: 20),
-                            ElevatedButton(
-                              onPressed: () => supabase.auth.signOut(),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: MEDfreeApp.primaryColor,
-                              ),
-                              child: const Text("Sign Out & Try Again"),
-                            )
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }
+                    );
+                  }
 
-              final profile = profileSnapshot.data;
-              // If profile is incomplete, send to onboarding.
-              if (profile == null || profile['full_name'] == null) {
-                return const OnboardingScreen();
-              }
-              // Otherwise, user is fully authenticated and onboarded.
-              return const AppShell();
-            },
-          );
-        }
-
-        // If no session, show the authentication screen.
-        return const AuthScreen();
+                  final profile = profileSnapshot.data;
+                  if (profile == null || profile['full_name'] == null) {
+                    return const OnboardingScreen();
+                  }
+                  return const AppShell();
+                },
+              );
+            }
+            return const AuthScreen();
+          },
+        );
       },
     );
   }

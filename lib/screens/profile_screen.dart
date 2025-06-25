@@ -15,7 +15,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // Controllers for the form fields
   final _nameController = TextEditingController();
   final _heightController = TextEditingController();
   final _currentWeightController = TextEditingController();
@@ -36,14 +35,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  /// Loads the user's profile data from the database.
   Future<void> _loadProfile() async {
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
       final userId = supabase.auth.currentUser!.id;
       final data = await supabase.from('profiles').select().eq('id', userId).single();
 
-      // Populate controllers with existing data
       _nameController.text = data['full_name'] ?? '';
       _heightController.text = (data['height_cm'] ?? '').toString();
       _currentWeightController.text = (data['current_weight_kg'] ?? '').toString();
@@ -56,7 +53,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Updates the user's profile and logs weight history.
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -65,16 +61,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final userId = supabase.auth.currentUser!.id;
-      final newWeight = double.tryParse(_currentWeightController.text.trim());
-
-      // Use the 'update_profile_and_log_weight' RPC to perform a transaction
+      
+      // BUG FIX: Pass all parameters to the RPC function, including the user_id
       await supabase.rpc('update_profile_and_log_weight', params: {
-          'p_user_id': userId,
+          'p_user_id': userId, // This was missing
           'p_full_name': _nameController.text.trim(),
           'p_height_cm': int.tryParse(_heightController.text.trim()),
-          'p_current_weight_kg': newWeight,
+          'p_current_weight_kg': double.tryParse(_currentWeightController.text.trim()),
           'p_goal_weight_kg': double.tryParse(_goalWeightController.text.trim()),
-          'p_weight_log_kg': newWeight
       });
 
       if (mounted) {
@@ -139,27 +133,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Helper widget to build a consistently styled TextFormField.
   Widget _buildTextFormField({
     required TextEditingController controller,
     required String label,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    // This TextFormField uses the styles defined in the main.dart InputDecorationTheme.
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor: Colors.grey.shade100, // Light fill for contrast inside the card
+        fillColor: Colors.grey.shade100,
       ),
       keyboardType: keyboardType,
       validator: validator,
     );
   }
 
-  /// A simple validator to ensure a field is not empty.
   String? _requiredValidator(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'This field is required';
