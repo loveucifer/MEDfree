@@ -243,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
             LinearProgressIndicator(
               value: (_totalWaterToday / _waterGoal).clamp(0.0, 1.0),
               minHeight: 12,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: Colors.white,
               valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.secondary),
               borderRadius: BorderRadius.circular(6)
             ),
