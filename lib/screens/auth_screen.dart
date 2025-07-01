@@ -1,8 +1,6 @@
-// lib/screens/auth_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:async';
-import '../main.dart'; // Import to use the app's theme colors
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -15,8 +13,9 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLogin = true;
-  bool _isLoading = false;
+  var _isLogin = true;
+  var _isLoading = false;
+  String? _errorMessage; // To hold and display the error message on screen
   final _supabase = Supabase.instance.client;
 
   @override
@@ -26,164 +25,229 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  /// Handles the sign-in process.
-  Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() { _isLoading = true; });
-    try {
-      await _supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-    } on AuthException catch (e) {
-      _showErrorSnackBar(e.message);
-    } catch (e) {
-      _showErrorSnackBar('An unexpected error occurred.');
-    } finally {
-      if (mounted) { setState(() { _isLoading = false; }); }
+  /// Handles the sign-in or sign-up process.
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
-  }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null; // Clear previous errors
+    });
 
-  /// Handles the sign-up process.
-  Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() { _isLoading = true; });
     try {
-      await _supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      if (mounted) {
-        _showErrorSnackBar('Check your email for a confirmation link!', isError: false);
-        setState(() { _isLogin = true; });
+      if (_isLogin) {
+        await _supabase.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        await _supabase.auth.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+        if (mounted) {
+          // Use the new error display for success messages too
+          setState(() {
+            _errorMessage = 'Check your email for a confirmation link!';
+            _isLogin = true;
+          });
+        }
       }
-    } on AuthException catch (e) {
-      _showErrorSnackBar(e.message);
-    } catch (e) {
-      _showErrorSnackBar('An unexpected error occurred.');
+    } on AuthException catch (error) {
+      setState(() {
+        _errorMessage = error.message;
+      });
+    } catch (error) {
+      setState(() {
+        _errorMessage = 'An unexpected error occurred.';
+      });
     } finally {
-      if (mounted) { setState(() { _isLoading = false; }); }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-  }
-
-  /// Displays a SnackBar with an error or success message.
-  void _showErrorSnackBar(String message, {bool isError = true}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : Colors.green,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      // Scaffold is transparent to let the gradient from the Container show through.
-      backgroundColor: Colors.transparent,
-      body: Container(
-        // Apply the standard app gradient.
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              MEDfreeApp.primaryColor,
-              MEDfreeApp.secondaryColor,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Welcome to MEDfree',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 40),
+                  Image.asset(
+                    'assets/medfree1.png',
+                    height: 150,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.medical_services, size: 150),
+                  ),
+                  const SizedBox(height: 40),
+                  Text(
+                    _isLogin ? 'Login' : 'Create Account',
+                    textAlign: TextAlign.start,
+                    style: textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isLogin ? 'Sign in to continue' : 'Create your account',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 40),
-                    // Email text field styled for the gradient background.
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: _buildInputDecoration('Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) => (value == null || !value.contains('@')) ? 'Please enter a valid email' : null,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 16),
-                    // Password text field styled for the gradient background.
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: _buildInputDecoration('Password'),
-                      obscureText: true,
-                      validator: (value) => (value == null || value.length < 6) ? 'Password must be at least 6 characters' : null,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 30),
-                    // Loading indicator or the main action button.
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                        : ElevatedButton(
-                            onPressed: _isLogin ? _signIn : _signUp,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: MEDfreeApp.primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            child: Text(_isLogin ? 'Sign In' : 'Sign Up'),
-                          ),
-                    const SizedBox(height: 16),
-                    // Button to toggle between Sign In and Sign Up modes.
-                    TextButton(
-                      onPressed: () => setState(() => _isLogin = !_isLogin),
-                      child: Text(
-                        _isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Sign In',
-                        style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: _isLogin ? 'Email or Mobile' : 'Email',
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8.0)),
                       ),
                     ),
-                  ],
-                ),
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    textCapitalization: TextCapitalization.none,
+                    validator: (value) {
+                      if (value == null ||
+                          value.trim().isEmpty ||
+                          !value.contains('@')) {
+                        return 'Please enter a valid email address.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                      ),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.trim().length < 6) {
+                        return 'Password must be at least 6 characters long.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Display error message directly on the screen
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
+                  if (_isLogin)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'Forgot Password',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _isLogin = !_isLogin;
+                            _errorMessage = null; // Clear error on switch
+                          }),
+                          child: const Text(
+                            'Create an account',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF9B59B6), Color(0xFF3498DB)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              _isLogin ? 'Sign in' : 'Sign up',
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  if (!_isLogin)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Already have an account?"),
+                        TextButton(
+                          onPressed: () => setState(() {
+                             _isLogin = true;
+                             _errorMessage = null; // Clear error on switch
+                          }),
+                          child: const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Helper method to create a consistent InputDecoration for text fields.
-  InputDecoration _buildInputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white70),
-      hintStyle: const TextStyle(color: Colors.white54),
-      // Border style when the field is not focused.
-      enabledBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.white70, width: 1.0),
-        borderRadius: BorderRadius.all(Radius.circular(12.0)),
-      ),
-      // Border style when the field is focused.
-      focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.white, width: 2.0),
-        borderRadius: BorderRadius.all(Radius.circular(12.0)),
       ),
     );
   }

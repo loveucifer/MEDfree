@@ -14,10 +14,30 @@ Future<void> main() async {
     WidgetsFlutterBinding.ensureInitialized();
     
     await dotenv.load(fileName: ".env");
+    
+    // --- START DEBUGGING ---
+    // The following lines will print the loaded values to your console.
+    // If they print "null", the .env file is not being read correctly.
+    final supabaseUrl = dotenv.env['SUPABASE_URL'];
+    final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+    print('--- SUPABASE DEBUG ---');
+    print('DEBUG: SUPABASE_URL: $supabaseUrl');
+    print('DEBUG: SUPABASE_ANON_KEY: $supabaseAnonKey');
+    print('----------------------');
+
+    if (supabaseUrl == null || supabaseAnonKey == null) {
+      throw Exception(
+        'Supabase URL or Anon Key is null. '
+        'Please ensure your .env file is set up correctly in the root of your project and included in pubspec.yaml assets.'
+      );
+    }
+    // --- END DEBUGGING ---
+
     await NotificationService().init();
     await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL']!,
-      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
     );
     
     runApp(const MEDfreeApp());

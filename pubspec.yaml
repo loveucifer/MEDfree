@@ -41,6 +41,7 @@ flutter:
     - assets/thrive_being.png
     - assets/medfree.png
     - assets/splash_logo.png
+    - assets/medfree1.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
