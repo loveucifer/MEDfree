@@ -158,6 +158,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionButtons() {
+    const Color buttonColor = Color(0xFFA6D11D);
+    const Color foregroundColor = Colors.white;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Row(
@@ -172,6 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.fitness_center),
               label: const Text('Log Exercise'),
+              backgroundColor: buttonColor,
+              foregroundColor: foregroundColor,
             ),
           ),
           const SizedBox(width: 16),
@@ -184,6 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: const Icon(Icons.fastfood),
               label: const Text('Log Meal'),
+              backgroundColor: buttonColor,
+              foregroundColor: foregroundColor,
             ),
           ),
         ],
@@ -224,6 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWaterSummaryCard(ThemeData theme) {
+    const Color logButtonColor = Color(0xFFA6D11D);
+    
     return Card(
       // PASTEL COLOR ADDED
       color: const Color(0xFFE0F7FA), // Light pastel blue/cyan
@@ -234,9 +243,12 @@ class _HomeScreenState extends State<HomeScreen> {
                  Text('Water', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                  OutlinedButton.icon(
                     onPressed: () => _logWater(250),
-                    icon: Icon(Icons.add, color: theme.colorScheme.primary),
-                    label: Text("Log", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.primary), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)))
+                    icon: const Icon(Icons.add, color: logButtonColor),
+                    label: const Text("Log", style: TextStyle(color: logButtonColor, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: logButtonColor), 
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
+                    )
                  )
                ],),
             const SizedBox(height: 16),
