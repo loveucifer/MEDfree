@@ -15,7 +15,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passwordController = TextEditingController();
   var _isLogin = true;
   var _isLoading = false;
-  String? _errorMessage; // To hold and display the error message on screen
+  String? _errorMessage;
   final _supabase = Supabase.instance.client;
 
   @override
@@ -26,13 +26,16 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   /// Handles the sign-in or sign-up process.
+  /// Navigation is now fully handled by the AuthGate in main.dart,
+  /// which listens for auth state changes. This function just
+  /// needs to trigger the auth event.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous errors
+      _errorMessage = null;
     });
 
     try {
@@ -46,21 +49,26 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        // After a successful sign-up, we don't need to navigate.
+        // The AuthGate's stream will see the new user and redirect to Onboarding.
+        // We can show a message to the user to check their email if confirmation is enabled.
         if (mounted) {
-          // Use the new error display for success messages too
           setState(() {
-            _errorMessage = 'Check your email for a confirmation link!';
+            _errorMessage = 'Success! Check your email for a confirmation link if required.';
             _isLogin = true;
           });
         }
       }
     } on AuthException catch (error) {
+      // Print the full error to the console for easier debugging
+      print('Auth Error: ${error.message}');
       setState(() {
         _errorMessage = error.message;
       });
     } catch (error) {
+      print('Unexpected Error: $error');
       setState(() {
-        _errorMessage = 'An unexpected error occurred.';
+        _errorMessage = 'An unexpected error occurred. Please try again.';
       });
     } finally {
       if (mounted) {
@@ -107,7 +115,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   TextFormField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: _isLogin ? 'Email or Mobile' : 'Email',
+                      labelText: 'Email',
                       border: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(8.0)),
                       ),
@@ -143,14 +151,15 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Display error message directly on the screen
                   if (_errorMessage != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(
-                          color: Colors.red,
+                        style: TextStyle(
+                          color: _errorMessage!.contains('Success')
+                              ? Colors.green
+                              : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -159,25 +168,14 @@ class _AuthScreenState extends State<AuthScreen> {
 
                   if (_isLogin)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            // TODO: Implement forgot password functionality
+                          },
                           child: const Text(
-                            'Forgot Password',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => setState(() {
-                            _isLogin = !_isLogin;
-                            _errorMessage = null; // Clear error on switch
-                          }),
-                          child: const Text(
-                            'Create an account',
+                            'Forgot Password?',
                             style: TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
@@ -223,25 +221,26 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  if (!_isLogin)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text("Already have an account?"),
-                        TextButton(
-                          onPressed: () => setState(() {
-                             _isLogin = true;
-                             _errorMessage = null; // Clear error on switch
-                          }),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_isLogin
+                          ? "Don't have an account?"
+                          : "Already have an account?"),
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _isLogin = !_isLogin;
+                          _errorMessage = null; // Clear error on switch
+                        }),
+                        child: Text(
+                          _isLogin ? 'Sign up' : 'Sign in',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 20),
                 ],
               ),

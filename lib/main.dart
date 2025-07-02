@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,24 +13,15 @@ Future<void> main() async {
     
     await dotenv.load(fileName: ".env");
     
-    // --- START DEBUGGING ---
-    // The following lines will print the loaded values to your console.
-    // If they print "null", the .env file is not being read correctly.
     final supabaseUrl = dotenv.env['SUPABASE_URL'];
     final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-
-    print('--- SUPABASE DEBUG ---');
-    print('DEBUG: SUPABASE_URL: $supabaseUrl');
-    print('DEBUG: SUPABASE_ANON_KEY: $supabaseAnonKey');
-    print('----------------------');
 
     if (supabaseUrl == null || supabaseAnonKey == null) {
       throw Exception(
         'Supabase URL or Anon Key is null. '
-        'Please ensure your .env file is set up correctly in the root of your project and included in pubspec.yaml assets.'
+        'Please ensure your .env file is set up correctly and included in pubspec.yaml assets.'
       );
     }
-    // --- END DEBUGGING ---
 
     await NotificationService().init();
     await Supabase.initialize(
@@ -43,10 +32,12 @@ Future<void> main() async {
     runApp(const MEDfreeApp());
 
   } catch (error) {
+    // This custom error screen is great for catching initialization failures.
     runApp(ErrorApp(error: error.toString()));
   }
 }
 
+/// A simple error screen for critical initialization failures.
 class ErrorApp extends StatelessWidget {
   final String error;
   const ErrorApp({super.key, required this.error});
@@ -180,22 +171,9 @@ class MEDfreeApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatefulWidget {
+/// AuthGate is now the single source of truth for navigation after launch.
+class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
-
-  @override
-  State<AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  late Future<void> _initFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    // This future ensures the splash screen is shown for at least 4 seconds.
-    _initFuture = Future.delayed(const Duration(seconds: 4));
-  }
 
   Future<Map<String, dynamic>?> _getProfile(String userId) async {
     try {
@@ -203,98 +181,58 @@ class _AuthGateState extends State<AuthGate> {
           .from('profiles')
           .select()
           .eq('id', userId)
-          .single()
-          .timeout(const Duration(seconds: 15));
+          .single();
       return response;
     } catch (e) {
-      throw Exception('Could not fetch user profile. Please check your network and try again.');
+      // This is expected for new users, so we return null.
+      // The calling FutureBuilder will handle this gracefully.
+      print("Could not find profile for user $userId. This is expected for new users.");
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _initFuture,
-      builder: (context, snapshot) {
-        // While the 4-second delay is active, show the splash screen.
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    // We listen to the auth state directly.
+    return StreamBuilder<AuthState>(
+      stream: supabase.auth.onAuthStateChange,
+      builder: (context, authSnapshot) {
+        // While waiting for the first auth event, show the splash screen.
+        if (authSnapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
 
-        // After the delay, check the auth state.
-        return StreamBuilder<AuthState>(
-          stream: supabase.auth.onAuthStateChange,
-          builder: (context, authSnapshot) {
-            // While waiting for the first auth state, continue showing splash.
-            if (authSnapshot.connectionState == ConnectionState.waiting) {
-              return const SplashScreen();
-            }
+        final session = authSnapshot.data?.session;
 
-            final session = authSnapshot.data?.session;
+        // If a user session exists, they are logged in.
+        if (session != null) {
+          // Now, we check if they have a profile.
+          return FutureBuilder<Map<String, dynamic>?>(
+            future: _getProfile(session.user.id),
+            builder: (context, profileSnapshot) {
+              // While fetching the profile, show the splash screen.
+              if (profileSnapshot.connectionState == ConnectionState.waiting) {
+                return const SplashScreen();
+              }
 
-            if (session != null) {
-              return FutureBuilder<Map<String, dynamic>?>(
-                future: _getProfile(session.user.id),
-                builder: (context, profileSnapshot) {
-                  if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                    return const SplashScreen();
-                  }
+              final profile = profileSnapshot.data;
+              
+              // **THIS IS THE KEY FIX**
+              // If the profile is null or incomplete, the user is new.
+              // Send them to the OnboardingScreen to create their profile.
+              if (profile == null || profile['full_name'] == null) {
+                return const OnboardingScreen();
+              }
 
-                  if (profileSnapshot.hasError) {
-                    return Scaffold(
-                      body: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [MEDfreeApp.primaryColor, MEDfreeApp.secondaryColor],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Error Loading Profile",
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  profileSnapshot.error.toString(),
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(color: Colors.white70),
-                                ),
-                                const SizedBox(height: 20),
-                                ElevatedButton(
-                                  onPressed: () => supabase.auth.signOut(),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: MEDfreeApp.primaryColor,
-                                  ),
-                                  child: const Text("Sign Out & Try Again"),
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final profile = profileSnapshot.data;
-                  if (profile == null || profile['full_name'] == null) {
-                    return const OnboardingScreen();
-                  }
-                  return const AppShell();
-                },
-              );
-            }
-            return const AuthScreen();
-          },
-        );
+              // If the profile exists, they are a returning user.
+              // Send them to the main app.
+              return const AppShell();
+            },
+          );
+        }
+        
+        // If there's no session, show the login screen.
+        return const AuthScreen();
       },
     );
   }

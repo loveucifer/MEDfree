@@ -31,13 +31,20 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  /// Returns the title for the current page.
+  /// Returns an empty string for the dashboard to hide the title.
   String _getPageTitle(int index) {
     switch (index) {
-      case 0: return 'Dashboard';
-      case 1: return 'Progress';
-      case 2: return 'Friends';
-      case 3: return 'Profile';
-      default: return 'MEDfree';
+      case 0:
+        return ''; // THE FIX: This removes the "Dashboard" text.
+      case 1:
+        return 'Progress';
+      case 2:
+        return 'Friends';
+      case 3:
+        return 'Profile';
+      default:
+        return 'MEDfree';
     }
   }
 
@@ -60,7 +67,8 @@ class _AppShellState extends State<AppShell> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen())),
             tooltip: 'Settings & Reminders',
           ),
           IconButton(
@@ -87,10 +95,22 @@ class _AppShellState extends State<AppShell> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.timeline_outlined), activeIcon: Icon(Icons.timeline), label: 'Progress'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outline), activeIcon: Icon(Icons.people), label: 'Friends'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.timeline_outlined),
+              activeIcon: Icon(Icons.timeline),
+              label: 'Progress'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline),
+              activeIcon: Icon(Icons.people),
+              label: 'Friends'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Theme.of(context).colorScheme.primary,
